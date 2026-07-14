@@ -1,0 +1,24 @@
+# QGIS temporary and lock files
+*.qgz~
+*.qgs~
+*.qgd
+*.aux.xml
+*.gpkg-shm
+*.gpkg-wal
+*.gpkg-journal
+
+# Runtime caches and logs
+__pycache__/
+*.py[cod]
+logs/*
+!logs/.gitkeep
+
+# Reproducible exports (keep final named exports if intentionally added)
+exports/*.tmp
+previews/*.tmp
+reports/*.tmp
+
+# Platform metadata
+.DS_Store
+Thumbs.db
+

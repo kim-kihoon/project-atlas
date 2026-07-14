@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "country": {
+    "iso3": "KOR",
+    "name_ko": "대한민국",
+    "name_en": "Republic of Korea"
+  },
+  "crs": "EPSG:5179",
+  "source": {
+    "path": "data/source/natural_earth_admin1/ne_10m_admin_1_states_provinces.shp",
+    "country_filter_field": "adm0_a3",
+    "country_filter_value": "KOR",
+    "source_year": 2022
+  },
+  "grid": {
+    "orientation": "pointy_top",
+    "target_tile_count": 166,
+    "target_area_km2": 605.21,
+    "side_length_m": 15262.55,
+    "pointy_width_m": 26435.51,
+    "pointy_height_m": 30525.10,
+    "flat_width_m": 30525.10,
+    "flat_height_m": 26435.51,
+    "origin_x": 500000.0,
+    "origin_y": 1000000.0,
+    "extent_buffer_m": 50000.0,
+    "candidate_min_overlap_m2": 1.0
+  },
+  "validation": {
+    "area_relative_tolerance": 0.0005,
+    "regular_edge_relative_tolerance": 0.001,
+    "overlap_area_tolerance_m2": 1.0,
+    "neighbor_shared_edge_tolerance_m": 5.0,
+    "coordinate_tolerance_m": 0.05
+  },
+  "outputs": {
+    "geopackage": "data/processed/Atlas_Korea.gpkg",
+    "project": "Atlas_Korea.qgz",
+    "preview": "previews/Atlas_Korea_Overview.png",
+    "allocation_report": "reports/allocation_report.md",
+    "validation_report": "reports/validation_report.md",
+    "geojson": "exports/Atlas_Korea_Tiles.geojson",
+    "csv": "exports/Atlas_Korea_Tiles.csv"
+  },
+  "admin1": [
+    {"code":"KR-11","name_ko":"서울","name_en":"Seoul","tiles":1,"color":"#e41a1c"},
+    {"code":"KR-26","name_ko":"부산","name_en":"Busan","tiles":1,"color":"#377eb8"},
+    {"code":"KR-27","name_ko":"대구","name_en":"Daegu","tiles":3,"color":"#4daf4a"},
+    {"code":"KR-28","name_ko":"인천","name_en":"Incheon","tiles":2,"color":"#984ea3"},
+    {"code":"KR-29","name_ko":"광주","name_en":"Gwangju","tiles":1,"color":"#ff7f00"},
+    {"code":"KR-30","name_ko":"대전","name_en":"Daejeon","tiles":1,"color":"#a65628"},
+    {"code":"KR-31","name_ko":"울산","name_en":"Ulsan","tiles":2,"color":"#f781bf"},
+    {"code":"KR-50","name_ko":"세종","name_en":"Sejong","tiles":1,"color":"#999999"},
+    {"code":"KR-41","name_ko":"경기","name_en":"Gyeonggi","tiles":17,"color":"#66c2a5"},
+    {"code":"KR-42","name_ko":"강원","name_en":"Gangwon","tiles":28,"color":"#fc8d62"},
+    {"code":"KR-43","name_ko":"충북","name_en":"Chungbuk","tiles":12,"color":"#8da0cb"},
+    {"code":"KR-44","name_ko":"충남","name_en":"Chungnam","tiles":14,"color":"#e78ac3"},
+    {"code":"KR-45","name_ko":"전북","name_en":"Jeonbuk","tiles":13,"color":"#a6d854"},
+    {"code":"KR-46","name_ko":"전남","name_en":"Jeonnam","tiles":20,"color":"#ffd92f"},
+    {"code":"KR-47","name_ko":"경북","name_en":"Gyeongbuk","tiles":30,"color":"#e5c494"},
+    {"code":"KR-48","name_ko":"경남","name_en":"Gyeongnam","tiles":17,"color":"#b3b3b3"},
+    {"code":"KR-49","name_ko":"제주","name_en":"Jeju","tiles":3,"color":"#1b9e77"}
+  ]
+}
+
