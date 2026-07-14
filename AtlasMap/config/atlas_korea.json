@@ -43,23 +43,22 @@
     "csv": "exports/Atlas_Korea_Tiles.csv"
   },
   "admin1": [
-    {"code":"KR-11","name_ko":"서울","name_en":"Seoul","tiles":1,"color":"#e41a1c"},
-    {"code":"KR-26","name_ko":"부산","name_en":"Busan","tiles":1,"color":"#377eb8"},
-    {"code":"KR-27","name_ko":"대구","name_en":"Daegu","tiles":3,"color":"#4daf4a"},
-    {"code":"KR-28","name_ko":"인천","name_en":"Incheon","tiles":2,"color":"#984ea3"},
-    {"code":"KR-29","name_ko":"광주","name_en":"Gwangju","tiles":1,"color":"#ff7f00"},
-    {"code":"KR-30","name_ko":"대전","name_en":"Daejeon","tiles":1,"color":"#a65628"},
-    {"code":"KR-31","name_ko":"울산","name_en":"Ulsan","tiles":2,"color":"#f781bf"},
-    {"code":"KR-50","name_ko":"세종","name_en":"Sejong","tiles":1,"color":"#999999"},
-    {"code":"KR-41","name_ko":"경기","name_en":"Gyeonggi","tiles":17,"color":"#66c2a5"},
-    {"code":"KR-42","name_ko":"강원","name_en":"Gangwon","tiles":28,"color":"#fc8d62"},
-    {"code":"KR-43","name_ko":"충북","name_en":"Chungbuk","tiles":12,"color":"#8da0cb"},
-    {"code":"KR-44","name_ko":"충남","name_en":"Chungnam","tiles":14,"color":"#e78ac3"},
-    {"code":"KR-45","name_ko":"전북","name_en":"Jeonbuk","tiles":13,"color":"#a6d854"},
-    {"code":"KR-46","name_ko":"전남","name_en":"Jeonnam","tiles":20,"color":"#ffd92f"},
-    {"code":"KR-47","name_ko":"경북","name_en":"Gyeongbuk","tiles":30,"color":"#e5c494"},
-    {"code":"KR-48","name_ko":"경남","name_en":"Gyeongnam","tiles":17,"color":"#b3b3b3"},
-    {"code":"KR-49","name_ko":"제주","name_en":"Jeju","tiles":3,"color":"#1b9e77"}
+    {"code":"KR-11","name_ko":"서울","name_en":"Seoul","target_tiles":1,"minimum_tiles":1,"color":"#e41a1c"},
+    {"code":"KR-26","name_ko":"부산","name_en":"Busan","target_tiles":1,"minimum_tiles":1,"color":"#377eb8"},
+    {"code":"KR-27","name_ko":"대구","name_en":"Daegu","target_tiles":3,"minimum_tiles":1,"color":"#4daf4a"},
+    {"code":"KR-28","name_ko":"인천","name_en":"Incheon","target_tiles":2,"minimum_tiles":1,"color":"#984ea3"},
+    {"code":"KR-29","name_ko":"광주","name_en":"Gwangju","target_tiles":1,"minimum_tiles":1,"color":"#ff7f00"},
+    {"code":"KR-30","name_ko":"대전","name_en":"Daejeon","target_tiles":1,"minimum_tiles":1,"color":"#a65628"},
+    {"code":"KR-31","name_ko":"울산","name_en":"Ulsan","target_tiles":2,"minimum_tiles":1,"color":"#f781bf"},
+    {"code":"KR-50","name_ko":"세종","name_en":"Sejong","target_tiles":1,"minimum_tiles":1,"color":"#999999"},
+    {"code":"KR-41","name_ko":"경기","name_en":"Gyeonggi","target_tiles":17,"minimum_tiles":1,"color":"#66c2a5"},
+    {"code":"KR-42","name_ko":"강원","name_en":"Gangwon","target_tiles":28,"minimum_tiles":1,"color":"#fc8d62"},
+    {"code":"KR-43","name_ko":"충북","name_en":"Chungbuk","target_tiles":12,"minimum_tiles":1,"color":"#8da0cb"},
+    {"code":"KR-44","name_ko":"충남","name_en":"Chungnam","target_tiles":14,"minimum_tiles":1,"color":"#e78ac3"},
+    {"code":"KR-45","name_ko":"전북","name_en":"Jeonbuk","target_tiles":13,"minimum_tiles":1,"color":"#a6d854"},
+    {"code":"KR-46","name_ko":"전남","name_en":"Jeonnam","target_tiles":20,"minimum_tiles":1,"color":"#ffd92f"},
+    {"code":"KR-47","name_ko":"경북","name_en":"Gyeongbuk","target_tiles":30,"minimum_tiles":1,"color":"#e5c494"},
+    {"code":"KR-48","name_ko":"경남","name_en":"Gyeongnam","target_tiles":17,"minimum_tiles":1,"color":"#b3b3b3"},
+    {"code":"KR-49","name_ko":"제주","name_en":"Jeju","target_tiles":3,"minimum_tiles":1,"color":"#1b9e77"}
   ]
 }
-

@@ -4,6 +4,11 @@ This directory contains the reproducible GIS pipeline for the Republic of Korea
 prototype map used by **Atlas**. The map uses 166 complete regular hexagons in
 EPSG:5179 and assigns each tile to one of 17 first-level administrative areas.
 
+Tiles are selected by Korean land overlap and assigned to the administrative
+area occupying the largest portion of each hexagon. Each configured admin area
+is guaranteed one tile only when dominant-overlap assignment would otherwise
+leave it unrepresented. Historical target counts are advisory report values.
+
 ## Quick start (macOS)
 
 From this directory:
@@ -41,4 +46,3 @@ the coordinate system used to locate and measure those features.
 
 All shared paths are relative to this directory. Do not save a QGIS layer using
 an absolute path.
-

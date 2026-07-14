@@ -7,9 +7,10 @@ Build a reproducible QGIS pipeline for the modern nation-management 4X game
 exactly 166 complete regular hexagons. Work must be reproducible on macOS and
 Windows with QGIS LTR 3.44, PyQGIS, and `qgis_process`.
 
-The project is a game-map approximation. Preserve the fixed tile allocation
-even when it differs from a literal rendering of the real administrative
-boundaries.
+The project is a game-map approximation. Preserve the exact national total of
+166 tiles. Select tiles by total Korean land overlap and assign each tile to the
+admin area with the greatest overlap. Admin target counts are advisory; only
+configured minimum representation is mandatory.
 
 ## Workspace and Safety Rules
 
@@ -106,7 +107,8 @@ Store every adjustable design value and validation tolerance in
 - Show administrative borders along shared edges between differently assigned
   hexagons; do not use the curved source boundary as the game border.
 
-Required admin-1 allocation, used as a hard validation constraint:
+Original admin-1 design targets, retained for comparison and reporting rather
+than used as hard validation constraints:
 
 | Admin-1 | Tiles |
 | --- | ---: |
@@ -159,8 +161,10 @@ produce the same geometries, assignments, and stable `tile_id` values:
    every admin-1 area.
 4. Select uncut candidates for the game map.
 5. Initially assign each tile to the admin area with greatest overlap.
-6. Optimize the selection and assignments to satisfy both 166 total tiles and
-   every fixed admin quota while maximizing boundary similarity/overlap score.
+6. Select exactly 166 candidates with the greatest Korean land overlap, then
+   assign each tile to its greatest-overlap admin area. If a configured required
+   admin area receives fewer than `minimum_tiles`, reassign its strongest
+   overlapping candidate as an explicit minimum-representation exception.
 7. Put difficult explicit adjustments in
    `overrides/tile_assignment_overrides.csv`; do not hide arbitrary exceptions
    in code.
@@ -242,7 +246,8 @@ any check fails:
 
 - CRS is EPSG:5179.
 - Exactly 166 final tiles exist.
-- All 17 admin allocations exactly match the configured quotas.
+- Every configured admin minimum is satisfied; target counts are reported but
+  are not validation gates.
 - Every `tile_id` is present and unique.
 - Every final geometry is valid, complete, and a regular hexagon.
 - Hex area is within the configured tolerance of 605.21 km2.
@@ -277,4 +282,3 @@ Assume the user is new to QGIS. When user interaction is needed:
   introduced.
 - Provide one safest recommended path first, then optional alternatives.
 - Do not ask the user to manually reproduce a step that can be scripted.
-

@@ -1,6 +1,6 @@
 """QGIS Processing script that builds the Atlas Republic of Korea map."""
 
-from collections import Counter, deque
+from collections import Counter
 from datetime import datetime, timezone
 import csv
 import json
@@ -72,120 +72,66 @@ def make_hexagon(cx, cy, side, orientation):
     return QgsGeometry.fromPolygonXY([points])
 
 
-class Edge:
-    __slots__ = ("to", "rev", "cap", "cost", "original_cap")
-
-    def __init__(self, to, rev, cap, cost):
-        self.to = to
-        self.rev = rev
-        self.cap = cap
-        self.cost = cost
-        self.original_cap = cap
-
-
-def add_edge(graph, source, target, capacity, cost):
-    graph[source].append(Edge(target, len(graph[target]), capacity, cost))
-    graph[target].append(Edge(source, len(graph[source]) - 1, 0, -cost))
-
-
-def allocate_tiles(candidates, admins, feedback):
-    """Exact quota allocation using deterministic min-cost max-flow."""
-    candidate_indexes = [i for i, item in enumerate(candidates) if item["land_area"] > 0]
-    source = 0
-    admin_start = 1
-    candidate_start = admin_start + len(admins)
-    sink = candidate_start + len(candidate_indexes)
-    graph = [[] for _ in range(sink + 1)]
-
-    for admin_index, admin in enumerate(admins):
-        add_edge(graph, source, admin_start + admin_index, int(admin["tiles"]), 0)
-
-    local_candidate_node = {}
-    for local_index, candidate_index in enumerate(candidate_indexes):
-        node = candidate_start + local_index
-        local_candidate_node[candidate_index] = node
-        add_edge(graph, node, sink, 1, 0)
-
-    edge_lookup = {}
-    for admin_index, admin in enumerate(admins):
-        admin_node = admin_start + admin_index
-        for candidate_index in candidate_indexes:
-            overlap = candidates[candidate_index]["overlaps"].get(admin["code"], 0.0)
-            if overlap <= 0:
-                continue
-            # Reward both assignment fidelity and total land coverage. The land
-            # term discourages internal holes while exact admin quotas remain
-            # hard constraints.
-            score = overlap + candidates[candidate_index]["land_area"] * 0.75
-            cost = -max(1, int(round(score / 1000.0)))
-            edge_lookup[(admin_index, candidate_index)] = len(graph[admin_node])
-            add_edge(graph, admin_node, local_candidate_node[candidate_index], 1, cost)
-
-    requested = sum(int(admin["tiles"]) for admin in admins)
-    flow = 0
-    total_cost = 0
-    node_count = len(graph)
-    while flow < requested:
-        distance = [10**30] * node_count
-        previous_node = [-1] * node_count
-        previous_edge = [-1] * node_count
-        in_queue = [False] * node_count
-        distance[source] = 0
-        queue = deque([source])
-        in_queue[source] = True
-        while queue:
-            node = queue.popleft()
-            in_queue[node] = False
-            for edge_index, edge in enumerate(graph[node]):
-                if edge.cap <= 0:
-                    continue
-                candidate_distance = distance[node] + edge.cost
-                if candidate_distance < distance[edge.to]:
-                    distance[edge.to] = candidate_distance
-                    previous_node[edge.to] = node
-                    previous_edge[edge.to] = edge_index
-                    if not in_queue[edge.to]:
-                        queue.append(edge.to)
-                        in_queue[edge.to] = True
-        if previous_node[sink] < 0:
-            availability = {
-                admin["code"]: sum(
-                    1 for candidate in candidates if candidate["overlaps"].get(admin["code"], 0) > 0
-                )
-                for admin in admins
-            }
-            raise QgsProcessingException(
-                f"Cannot satisfy exact tile quotas; allocated {flow}/{requested}. "
-                f"Overlapping candidate counts: {availability}"
-            )
-        node = sink
-        while node != source:
-            parent = previous_node[node]
-            edge = graph[parent][previous_edge[node]]
-            edge.cap -= 1
-            graph[node][edge.rev].cap += 1
-            node = parent
-        flow += 1
-        total_cost += distance[sink]
-        if flow % 20 == 0:
-            feedback.setProgress(min(85, 45 + int(flow / requested * 35)))
-
-    assignments = {}
-    for admin_index, admin in enumerate(admins):
-        admin_node = admin_start + admin_index
-        for candidate_index in candidate_indexes:
-            lookup = edge_lookup.get((admin_index, candidate_index))
-            if lookup is None:
-                continue
-            edge = graph[admin_node][lookup]
-            if edge.original_cap == 1 and edge.cap == 0:
-                assignments[candidate_index] = admin["code"]
-    if len(assignments) != requested:
+def allocate_tiles(candidates, admins, requested, feedback):
+    """Select by land coverage, assign by dominant overlap, then satisfy minima."""
+    eligible = [i for i, item in enumerate(candidates) if item["land_area"] > 0]
+    if len(eligible) < requested:
         raise QgsProcessingException(
-            f"Internal allocation error: expected {requested}, got {len(assignments)}"
+            f"Only {len(eligible)} candidates intersect land; {requested} are required"
         )
-    feedback.pushInfo(f"Exact allocation complete: {flow} tiles, score {-total_cost}")
-    return assignments
+    selected = sorted(
+        eligible,
+        key=lambda i: (-candidates[i]["land_area"], candidates[i]["tile_id"]),
+    )[:requested]
+    assignments = {}
+    for index in selected:
+        overlaps = candidates[index]["overlaps"]
+        assignments[index] = sorted(overlaps, key=lambda code: (-overlaps[code], code))[0]
+
+    minimums = {admin["code"]: int(admin.get("minimum_tiles", 0)) for admin in admins}
+    counts = Counter(assignments.values())
+    minimum_exceptions = {}
+    deficits = [
+        code for code, minimum in minimums.items()
+        for _ in range(max(0, minimum - counts.get(code, 0)))
+    ]
+    # Handle the most spatially constrained missing admins first.
+    deficits.sort(
+        key=lambda code: (
+            sum(1 for i in selected if candidates[i]["overlaps"].get(code, 0) > 0),
+            code,
+        )
+    )
+    for code in deficits:
+        options = []
+        for index in selected:
+            candidate = candidates[index]
+            required_overlap = candidate["overlaps"].get(code, 0.0)
+            if required_overlap <= 0 or assignments[index] == code:
+                continue
+            donor = assignments[index]
+            if counts[donor] <= minimums.get(donor, 0):
+                continue
+            donor_overlap = candidate["overlaps"].get(donor, 0.0)
+            required_share = required_overlap / candidate["geometry"].area()
+            regret = donor_overlap - required_overlap
+            options.append((-required_share, regret, -candidate["land_area"], candidate["tile_id"], index))
+        if not options:
+            raise QgsProcessingException(
+                f"Cannot satisfy minimum representation for {code} with the selected {requested} tiles"
+            )
+        _, _, _, _, index = sorted(options)[0]
+        donor = assignments[index]
+        assignments[index] = code
+        counts[donor] -= 1
+        counts[code] += 1
+        minimum_exceptions[index] = (donor, code)
+
+    feedback.pushInfo(
+        f"Selected {requested} tiles by land overlap; "
+        f"applied {len(minimum_exceptions)} minimum-representation exceptions"
+    )
+    return assignments, minimum_exceptions
 
 
 def memory_layer(geometry, crs, name, fields):
@@ -281,8 +227,8 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         admins = settings["admin1"]
         admin_by_code = {admin["code"]: admin for admin in admins}
         expected_total = int(settings["grid"]["target_tile_count"])
-        if sum(int(item["tiles"]) for item in admins) != expected_total:
-            raise QgsProcessingException("Configured admin quotas do not equal target tile count")
+        if sum(int(item.get("minimum_tiles", 0)) for item in admins) > expected_total:
+            raise QgsProcessingException("Configured admin minimums exceed target tile count")
 
         source_path = resolve(root, settings["source"]["path"])
         gpkg_path = resolve(root, settings["outputs"]["geopackage"])
@@ -309,6 +255,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             ("source_name", QVariant.String),
             ("source_year", QVariant.Int),
             ("tile_target", QVariant.Int),
+            ("tile_minimum", QVariant.Int),
             ("tile_count", QVariant.Int),
         ):
             admin_fields.append(QgsField(name, kind))
@@ -404,7 +351,9 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         )
         feedback.setProgress(40)
 
-        assignments = allocate_tiles(candidates, admins, feedback)
+        assignments, minimum_exceptions = allocate_tiles(
+            candidates, admins, expected_total, feedback
+        )
         overrides = load_overrides(override_path)
         override_reasons = {}
         for candidate_index, code in list(assignments.items()):
@@ -455,6 +404,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             ("best_overlap", QVariant.Double),
             ("selected", QVariant.Bool),
             ("assigned_admin", QVariant.String),
+            ("assignment_method", QVariant.String),
             ("scores_json", QVariant.String),
         ):
             candidate_fields.append(QgsField(name, kind))
@@ -473,6 +423,11 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                     candidate["land_area"] / hex_area,
                     best_admin, best_overlap / 1_000_000.0,
                     index in assignments, assignments.get(index),
+                    (
+                        "manual_override" if candidate["tile_id"] in override_reasons
+                        else "minimum_representation" if index in minimum_exceptions
+                        else "dominant_overlap"
+                    ) if index in assignments else None,
                     json.dumps(
                         {code: round(area / 1_000_000.0, 6) for code, area in sorted(candidate["overlaps"].items())},
                         ensure_ascii=False, separators=(",", ":"),
@@ -496,6 +451,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             ("district_2", QVariant.String), ("district_3", QVariant.String),
             ("primary_industry", QVariant.String), ("terrain", QVariant.String),
             ("source_year", QVariant.Int), ("manual_override", QVariant.Bool),
+            ("assignment_method", QVariant.String),
             ("overlap_km2", QVariant.Double), ("assignment_score", QVariant.Double),
         ]
         for name, kind in field_specs:
@@ -520,6 +476,11 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 "neighbor_ids": json.dumps(neighbors[candidate["tile_id"]], separators=(",", ":")),
                 "source_year": int(settings["source"]["source_year"]),
                 "manual_override": candidate["tile_id"] in override_reasons,
+                "assignment_method": (
+                    "manual_override" if candidate["tile_id"] in override_reasons
+                    else "minimum_representation" if index in minimum_exceptions
+                    else "dominant_overlap"
+                ),
                 "overlap_km2": overlap / 1_000_000.0,
                 "assignment_score": overlap / candidate["geometry"].area(),
             }
@@ -535,7 +496,8 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             feature.setGeometry(admin_geometries[code])
             feature.setAttributes(
                 [code, admin["name_ko"], admin["name_en"], admin_source_names[code],
-                 int(settings["source"]["source_year"]), int(admin["tiles"]), counts[code]]
+                 int(settings["source"]["source_year"]), int(admin["target_tiles"]),
+                 int(admin.get("minimum_tiles", 0)), counts[code]]
             )
             admin_features.append(feature)
         admin_layer.dataProvider().addFeatures(admin_features)
@@ -711,14 +673,30 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             f"Generated: {datetime.now(timezone.utc).isoformat()}", "",
             f"- Orientation: `{orientation}`", f"- Final tiles: **{len(selected_indexes)}**",
             f"- Target tile area: {settings['grid']['target_area_km2']} km2", "",
-            "| Code | Admin area | Target | Actual | Difference |", "| --- | --- | ---: | ---: | ---: |",
+            "- Assignment policy: dominant administrative overlap with configured minimum representation",
+            "- Target counts are advisory, not hard constraints", "",
+            "| Code | Admin area | Target | Minimum | Actual | Difference |",
+            "| --- | --- | ---: | ---: | ---: | ---: |",
         ]
         for admin in admins:
             actual = counts[admin["code"]]
             report_lines.append(
                 f"| {admin['code']} | {admin['name_ko']} / {admin['name_en']} | "
-                f"{admin['tiles']} | {actual} | {actual - int(admin['tiles'])} |"
+                f"{admin['target_tiles']} | {admin.get('minimum_tiles', 0)} | {actual} | "
+                f"{actual - int(admin['target_tiles'])} |"
             )
+        report_lines.extend(["", "## Minimum-representation exceptions", ""])
+        if minimum_exceptions:
+            for index, (dominant, assigned) in sorted(
+                minimum_exceptions.items(), key=lambda item: candidates[item[0]]["tile_id"]
+            ):
+                candidate = candidates[index]
+                report_lines.append(
+                    f"- `{candidate['tile_id']}`: dominant `{dominant}` -> required `{assigned}`; "
+                    f"required overlap {candidate['overlaps'].get(assigned, 0) / 1_000_000.0:.2f} km2"
+                )
+        else:
+            report_lines.append("- None")
         boundary_tiles = []
         for index in selected_indexes:
             candidate = candidates[index]

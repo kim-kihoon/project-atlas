@@ -114,20 +114,58 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         check("Tile IDs present", not blank_ids, f"blank={len(blank_ids)}")
         check("Tile IDs unique", not duplicate_ids, f"duplicates={duplicate_ids}")
 
-        configured = {item["code"]: int(item["tiles"]) for item in settings["admin1"]}
+        targets = {item["code"]: int(item["target_tiles"]) for item in settings["admin1"]}
+        minimums = {item["code"]: int(item.get("minimum_tiles", 0)) for item in settings["admin1"]}
         actual = Counter(str(feature["admin1_code"] or "") for feature in features)
-        quota_differences = {
-            code: actual.get(code, 0) - target for code, target in configured.items()
-            if actual.get(code, 0) != target
+        minimum_deficits = {
+            code: actual.get(code, 0) - minimum for code, minimum in minimums.items()
+            if actual.get(code, 0) < minimum
         }
-        unexpected_codes = sorted(set(actual) - set(configured))
+        unexpected_codes = sorted(set(actual) - set(targets))
         check(
-            "Admin quotas",
-            not quota_differences and not unexpected_codes,
-            f"differences={quota_differences}, unexpected={unexpected_codes}",
+            "Admin minimum representation",
+            not minimum_deficits and not unexpected_codes,
+            f"deficits={minimum_deficits}, unexpected={unexpected_codes}",
         )
         invalid_assignment = [feature["tile_id"] for feature in features if not feature["admin1_code"]]
         check("Exactly one admin assignment", not invalid_assignment, f"invalid={invalid_assignment}")
+
+        candidate_layer = QgsVectorLayer(f"{gpkg}|layername=hex_candidates", "hex_candidates", "ogr")
+        candidate_features = list(candidate_layer.getFeatures()) if candidate_layer.isValid() else []
+        best_admin_by_id = {
+            str(feature["candidate_id"]): str(feature["best_admin"] or "")
+            for feature in candidate_features
+        }
+        selected_candidate_ids = {
+            str(feature["candidate_id"]) for feature in candidate_features if bool(feature["selected"])
+        }
+        expected_land_selection = {
+            str(feature["candidate_id"])
+            for feature in sorted(
+                (feature for feature in candidate_features if float(feature["land_area_km2"] or 0) > 0),
+                key=lambda feature: (
+                    -float(feature["land_area_km2"]), str(feature["candidate_id"]),
+                ),
+            )[:expected_count]
+        }
+        selection_difference = sorted(selected_candidate_ids.symmetric_difference(expected_land_selection))
+        check(
+            "Maximum-land-overlap tile selection",
+            not selection_difference,
+            f"selection_difference={selection_difference}",
+        )
+        dominant_mismatches = [
+            str(feature["tile_id"]) for feature in features
+            if str(feature["assignment_method"] or "") == "dominant_overlap"
+            and str(feature["admin1_code"] or "") != best_admin_by_id.get(str(feature["tile_id"]), "")
+        ]
+        allowed_methods = {"dominant_overlap", "minimum_representation", "manual_override"}
+        invalid_methods = [
+            (str(feature["tile_id"]), str(feature["assignment_method"] or ""))
+            for feature in features if str(feature["assignment_method"] or "") not in allowed_methods
+        ]
+        check("Assignment methods", not invalid_methods, f"invalid={invalid_methods}")
+        check("Dominant-overlap assignments", not dominant_mismatches, f"mismatches={dominant_mismatches}")
 
         target_area = float(settings["grid"]["target_area_km2"])
         area_tolerance = float(validation["area_relative_tolerance"])
@@ -225,9 +263,19 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         for name, passed, detail in checks:
             safe_detail = str(detail).replace("|", "\\|").replace("\n", " ")
             lines.append(f"| {name} | {'PASS' if passed else 'FAIL'} | {safe_detail} |")
-        lines.extend(["", "## Allocation", "", "| Code | Target | Actual |", "| --- | ---: | ---: |"])
+        lines.extend([
+            "", "## Allocation", "",
+            "Targets are advisory; minimums are validation gates.", "",
+            "| Code | Target | Minimum | Actual | Difference |",
+            "| --- | ---: | ---: | ---: | ---: |",
+        ])
         for item in settings["admin1"]:
-            lines.append(f"| {item['code']} | {item['tiles']} | {actual.get(item['code'], 0)} |")
+            code = item["code"]
+            target = int(item["target_tiles"])
+            value = actual.get(code, 0)
+            lines.append(
+                f"| {code} | {target} | {item.get('minimum_tiles', 0)} | {value} | {value - target} |"
+            )
         report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         feedback.pushInfo(f"Validation report: {report_path}")
         feedback.setProgress(100)
