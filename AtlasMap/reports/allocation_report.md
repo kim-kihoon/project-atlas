@@ -1,11 +1,12 @@
 # Atlas Korea tile allocation report
 
-Generated: 2026-07-14T23:23:53.985882+00:00
+Generated: 2026-07-14T23:29:51.642758+00:00
 
 - Orientation: `pointy_top`
-- Final tiles: **166**
+- Final tiles: **160**
 - Target tile area: 605.21 km2
 
+- Country selection: dominant overlap among nearby countries and ocean; no fixed national total
 - Assignment policy: dominant administrative overlap with configured minimum representation
 - Target counts are advisory, not hard constraints
 
@@ -19,15 +20,15 @@ Generated: 2026-07-14T23:23:53.985882+00:00
 | KR-30 | 대전 / Daejeon | 1 | 1 | 1 | 0 |
 | KR-31 | 울산 / Ulsan | 2 | 1 | 1 | -1 |
 | KR-50 | 세종 / Sejong | 1 | 1 | 1 | 0 |
-| KR-41 | 경기 / Gyeonggi | 17 | 1 | 17 | 0 |
-| KR-42 | 강원 / Gangwon | 28 | 1 | 34 | 6 |
+| KR-41 | 경기 / Gyeonggi | 17 | 1 | 16 | -1 |
+| KR-42 | 강원 / Gangwon | 28 | 1 | 33 | 5 |
 | KR-43 | 충북 / Chungbuk | 12 | 1 | 12 | 0 |
 | KR-44 | 충남 / Chungnam | 14 | 1 | 11 | -3 |
 | KR-45 | 전북 / Jeonbuk | 13 | 1 | 15 | 2 |
-| KR-46 | 전남 / Jeonnam | 20 | 1 | 17 | -3 |
-| KR-47 | 경북 / Gyeongbuk | 30 | 1 | 31 | 1 |
-| KR-48 | 경남 / Gyeongnam | 17 | 1 | 17 | 0 |
-| KR-49 | 제주 / Jeju | 3 | 1 | 4 | 1 |
+| KR-46 | 전남 / Jeonnam | 20 | 1 | 16 | -4 |
+| KR-47 | 경북 / Gyeongbuk | 30 | 1 | 30 | 0 |
+| KR-48 | 경남 / Gyeongnam | 17 | 1 | 16 | -1 |
+| KR-49 | 제주 / Jeju | 3 | 1 | 3 | 0 |
 
 ## Minimum-representation exceptions
 
@@ -41,7 +42,6 @@ Generated: 2026-07-14T23:23:53.985882+00:00
 
 ## Boundary tiles
 
-- `KOR_P_R100028_C100020` -> `KR-48`; intersects KR-46, KR-48
 - `KOR_P_R100029_C100019` -> `KR-46`; intersects KR-46, KR-48
 - `KOR_P_R100030_C100016` -> `KR-46`; intersects KR-45, KR-46
 - `KOR_P_R100030_C100017` -> `KR-29`; intersects KR-29, KR-46
@@ -88,14 +88,12 @@ Generated: 2026-07-14T23:23:53.985882+00:00
 - `KOR_P_R100037_C100019` -> `KR-43`; intersects KR-43, KR-47
 - `KOR_P_R100037_C100020` -> `KR-47`; intersects KR-43, KR-47
 - `KOR_P_R100037_C100024` -> `KR-47`; intersects KR-42, KR-47
-- `KOR_P_R100037_C100025` -> `KR-47`; intersects KR-42, KR-47
 - `KOR_P_R100038_C100017` -> `KR-44`; intersects KR-41, KR-44
 - `KOR_P_R100038_C100018` -> `KR-44`; intersects KR-41, KR-43, KR-44
 - `KOR_P_R100038_C100021` -> `KR-43`; intersects KR-43, KR-47
 - `KOR_P_R100038_C100022` -> `KR-47`; intersects KR-43, KR-47
 - `KOR_P_R100038_C100024` -> `KR-47`; intersects KR-42, KR-47
 - `KOR_P_R100038_C100025` -> `KR-42`; intersects KR-42, KR-47
-- `KOR_P_R100039_C100016` -> `KR-41`; intersects KR-41, KR-44
 - `KOR_P_R100039_C100017` -> `KR-41`; intersects KR-41, KR-44
 - `KOR_P_R100039_C100018` -> `KR-41`; intersects KR-41, KR-43
 - `KOR_P_R100039_C100019` -> `KR-43`; intersects KR-41, KR-42, KR-43
@@ -121,7 +119,6 @@ Generated: 2026-07-14T23:23:53.985882+00:00
 - `KOR_P_R100044_C100017` -> `KR-41`; intersects KR-41, KR-42
 - `KOR_P_R100044_C100018` -> `KR-41`; intersects KR-41, KR-42
 - `KOR_P_R100044_C100019` -> `KR-42`; intersects KR-41, KR-42
-- `KOR_P_R100045_C100017` -> `KR-42`; intersects KR-41, KR-42
 
 ## Manual overrides
 

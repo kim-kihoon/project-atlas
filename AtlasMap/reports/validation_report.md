@@ -1,6 +1,6 @@
 # Atlas Korea validation report
 
-Generated: 2026-07-14T23:23:54.982662+00:00
+Generated: 2026-07-14T23:29:52.656808+00:00
 
 Overall result: **PASS**
 
@@ -8,12 +8,14 @@ Overall result: **PASS**
 | --- | --- | --- |
 | GeoPackage layer loads | PASS | /Users/kimkihoon/Desktop/my-projects/atlas/AtlasMap/data/processed/Atlas_Korea.gpkg |
 | CRS | PASS | EPSG:5179 |
-| Final tile count | PASS | 166 / 166 |
+| Final country code | PASS | wrong_country=[] |
 | Tile IDs present | PASS | blank=0 |
 | Tile IDs unique | PASS | duplicates=[] |
 | Admin minimum representation | PASS | deficits={}, unexpected=[] |
 | Exactly one admin assignment | PASS | invalid=[] |
-| Maximum-land-overlap tile selection | PASS | selection_difference=[] |
+| Dominant country-or-ocean calculation | PASS | invalid=[] |
+| Dominant-country tile selection | PASS | selection_difference=[] |
+| Derived final tile count | PASS | actual=160, derived=160 |
 | Assignment methods | PASS | invalid=[] |
 | Dominant-overlap assignments | PASS | mismatches=[] |
 | Valid geometries | PASS | invalid=[] |
@@ -39,12 +41,12 @@ Targets are advisory; minimums are validation gates.
 | KR-30 | 1 | 1 | 1 | 0 |
 | KR-31 | 2 | 1 | 1 | -1 |
 | KR-50 | 1 | 1 | 1 | 0 |
-| KR-41 | 17 | 1 | 17 | 0 |
-| KR-42 | 28 | 1 | 34 | 6 |
+| KR-41 | 17 | 1 | 16 | -1 |
+| KR-42 | 28 | 1 | 33 | 5 |
 | KR-43 | 12 | 1 | 12 | 0 |
 | KR-44 | 14 | 1 | 11 | -3 |
 | KR-45 | 13 | 1 | 15 | 2 |
-| KR-46 | 20 | 1 | 17 | -3 |
-| KR-47 | 30 | 1 | 31 | 1 |
-| KR-48 | 17 | 1 | 17 | 0 |
-| KR-49 | 3 | 1 | 4 | 1 |
+| KR-46 | 20 | 1 | 16 | -4 |
+| KR-47 | 30 | 1 | 30 | 0 |
+| KR-48 | 17 | 1 | 16 | -1 |
+| KR-49 | 3 | 1 | 3 | 0 |

@@ -70,7 +70,7 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         return "atlas"
 
     def shortHelpString(self):
-        return tr("Validates all fixed Atlas Korea tile, geometry, adjacency, CRS and path rules.")
+        return tr("Validates dominant country/admin assignment, geometry, adjacency, CRS and path rules.")
 
     def createInstance(self):
         return AtlasKoreaValidate()
@@ -105,8 +105,12 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
 
         check("CRS", layer.crs().authid() == settings["crs"], layer.crs().authid())
         features = list(layer.getFeatures())
-        expected_count = int(settings["grid"]["target_tile_count"])
-        check("Final tile count", len(features) == expected_count, f"{len(features)} / {expected_count}")
+        country_iso3 = settings["country"]["iso3"]
+        wrong_country = [
+            str(feature["tile_id"]) for feature in features
+            if str(feature["country_iso3"] or "") != country_iso3
+        ]
+        check("Final country code", not wrong_country, f"wrong_country={wrong_country}")
 
         ids = [str(feature["tile_id"] or "") for feature in features]
         blank_ids = [i for i in ids if not i]
@@ -139,20 +143,35 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         selected_candidate_ids = {
             str(feature["candidate_id"]) for feature in candidate_features if bool(feature["selected"])
         }
-        expected_land_selection = {
-            str(feature["candidate_id"])
-            for feature in sorted(
-                (feature for feature in candidate_features if float(feature["land_area_km2"] or 0) > 0),
-                key=lambda feature: (
-                    -float(feature["land_area_km2"]), str(feature["candidate_id"]),
-                ),
-            )[:expected_count]
-        }
-        selection_difference = sorted(selected_candidate_ids.symmetric_difference(expected_land_selection))
+        invalid_territory_dominance = []
+        for feature in candidate_features:
+            try:
+                scores = json.loads(str(feature["country_scores_json"] or "{}"))
+                expected_dominant = sorted(scores, key=lambda code: (-float(scores[code]), code))[0]
+            except (ValueError, TypeError, KeyError, IndexError, json.JSONDecodeError):
+                invalid_territory_dominance.append(str(feature["candidate_id"]))
+                continue
+            if str(feature["dominant_territory"] or "") != expected_dominant:
+                invalid_territory_dominance.append(str(feature["candidate_id"]))
         check(
-            "Maximum-land-overlap tile selection",
+            "Dominant country-or-ocean calculation",
+            not invalid_territory_dominance,
+            f"invalid={invalid_territory_dominance}",
+        )
+        expected_country_selection = {
+            str(feature["candidate_id"]) for feature in candidate_features
+            if str(feature["dominant_territory"] or "") == country_iso3
+        }
+        selection_difference = sorted(selected_candidate_ids.symmetric_difference(expected_country_selection))
+        check(
+            "Dominant-country tile selection",
             not selection_difference,
             f"selection_difference={selection_difference}",
+        )
+        check(
+            "Derived final tile count",
+            len(features) == len(expected_country_selection),
+            f"actual={len(features)}, derived={len(expected_country_selection)}",
         )
         dominant_mismatches = [
             str(feature["tile_id"]) for feature in features

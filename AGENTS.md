@@ -4,13 +4,14 @@
 
 Build a reproducible QGIS pipeline for the modern nation-management 4X game
 **Atlas**. The first deliverable is a Republic of Korea game map composed of
-exactly 166 complete regular hexagons. Work must be reproducible on macOS and
+complete regular hexagons. Work must be reproducible on macOS and
 Windows with QGIS LTR 3.44, PyQGIS, and `qgis_process`.
 
-The project is a game-map approximation. Preserve the exact national total of
-166 tiles. Select tiles by total Korean land overlap and assign each tile to the
-admin area with the greatest overlap. Admin target counts are advisory; only
-configured minimum representation is mandatory.
+The project is a game-map approximation. Do not enforce a fixed national tile
+count. Assign each global-grid hex to the country or ocean occupying its largest
+area; keep only Korea-dominant hexes as Korean tiles. Assign each Korean tile to
+the admin area with the greatest overlap. Admin target counts are advisory;
+only configured minimum representation is mandatory.
 
 ## Workspace and Safety Rules
 
@@ -94,7 +95,7 @@ Store every adjustable design value and validation tolerance in
 
 - Country: Republic of Korea; ISO3: `KOR`
 - Project CRS: `EPSG:5179` (`KGD2002 / Unified CS`)
-- Final land tiles: 166
+- National tile count: derived from dominant country-or-ocean overlap, not fixed
 - Target area per regular hexagon: 605.21 km2
 - Side length: approximately 15,262.55 m
 - Flat-top dimensions: approximately 30,525.10 m x 26,435.51 m
@@ -129,7 +130,7 @@ than used as hard validation constraints:
 | Gyeongbuk | 30 |
 | Gyeongnam | 17 |
 | Jeju | 3 |
-| **Total** | **166** |
+| **Original target total** | **166** |
 
 The configuration should also hold stable admin codes and Korean/English names,
 not just the display labels in this table.
@@ -161,8 +162,9 @@ produce the same geometries, assignments, and stable `tile_id` values:
    every admin-1 area.
 4. Select uncut candidates for the game map.
 5. Initially assign each tile to the admin area with greatest overlap.
-6. Select exactly 166 candidates with the greatest Korean land overlap, then
-   assign each tile to its greatest-overlap admin area. If a configured required
+6. Compare Korea, nearby countries, and ocean in every candidate. Select every
+   Korea-dominant candidate, then assign it to its greatest-overlap Korean admin
+   area. If a configured required
    admin area receives fewer than `minimum_tiles`, reassign its strongest
    overlapping candidate as an explicit minimum-representation exception.
 7. Put difficult explicit adjustments in
@@ -178,7 +180,7 @@ Create at least these layers in `Atlas_Korea.gpkg`:
 
 - `admin1_source`: cleaned/reprojected 17-area reference boundaries
 - `hex_candidates`: all candidates and overlap scores
-- `korea_tiles`: exactly 166 final game hexagons
+- `korea_tiles`: all Korea-dominant final game hexagons
 - `city_markers`: an initially empty point layer with a documented schema
 
 `korea_tiles` must include at least:
@@ -245,7 +247,8 @@ Implement `scripts/validate_korea_map.py` and fail with a nonzero exit status if
 any check fails:
 
 - CRS is EPSG:5179.
-- Exactly 166 final tiles exist.
+- Every final tile is Korea-dominant over neighboring countries and ocean; the
+  national total is derived rather than fixed.
 - Every configured admin minimum is satisfied; target counts are reported but
   are not validation gates.
 - Every `tile_id` is present and unique.

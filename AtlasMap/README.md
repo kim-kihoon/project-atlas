@@ -1,13 +1,16 @@
 # Atlas Korea QGIS Map
 
 This directory contains the reproducible GIS pipeline for the Republic of Korea
-prototype map used by **Atlas**. The map uses 166 complete regular hexagons in
-EPSG:5179 and assigns each tile to one of 17 first-level administrative areas.
+prototype map used by **Atlas**. The map uses complete regular hexagons in
+EPSG:5179 and assigns each tile first to its dominant country-or-ocean overlap,
+then to a first-level administrative area.
 
-Tiles are selected by Korean land overlap and assigned to the administrative
-area occupying the largest portion of each hexagon. Each configured admin area
-is guaranteed one tile only when dominant-overlap assignment would otherwise
-leave it unrepresented. Historical target counts are advisory report values.
+There is no fixed national tile count. A tile belongs to Korea only when Korean
+land occupies more of it than any neighboring country or the ocean. Korean
+tiles are assigned to the administrative area occupying their largest portion.
+Each configured admin area is guaranteed one tile only when dominant-overlap
+assignment would otherwise leave it unrepresented. Historical target counts
+are advisory report values.
 
 ## Quick start (macOS)
 

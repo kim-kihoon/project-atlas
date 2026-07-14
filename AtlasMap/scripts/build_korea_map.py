@@ -72,17 +72,15 @@ def make_hexagon(cx, cy, side, orientation):
     return QgsGeometry.fromPolygonXY([points])
 
 
-def allocate_tiles(candidates, admins, requested, feedback):
-    """Select by land coverage, assign by dominant overlap, then satisfy minima."""
-    eligible = [i for i, item in enumerate(candidates) if item["land_area"] > 0]
-    if len(eligible) < requested:
-        raise QgsProcessingException(
-            f"Only {len(eligible)} candidates intersect land; {requested} are required"
-        )
-    selected = sorted(
-        eligible,
-        key=lambda i: (-candidates[i]["land_area"], candidates[i]["tile_id"]),
-    )[:requested]
+def allocate_tiles(candidates, admins, country_iso3, feedback):
+    """Keep country-dominant tiles, assign dominant admin, then satisfy minima."""
+    selected = [
+        i for i, item in enumerate(candidates)
+        if item["dominant_territory"] == country_iso3
+    ]
+    selected.sort(key=lambda i: candidates[i]["tile_id"])
+    if not selected:
+        raise QgsProcessingException(f"No candidate is dominated by {country_iso3}")
     assignments = {}
     for index in selected:
         overlaps = candidates[index]["overlaps"]
@@ -118,7 +116,7 @@ def allocate_tiles(candidates, admins, requested, feedback):
             options.append((-required_share, regret, -candidate["land_area"], candidate["tile_id"], index))
         if not options:
             raise QgsProcessingException(
-                f"Cannot satisfy minimum representation for {code} with the selected {requested} tiles"
+                f"Cannot satisfy minimum representation for {code} with the selected country tiles"
             )
         _, _, _, _, index = sorted(options)[0]
         donor = assignments[index]
@@ -128,7 +126,7 @@ def allocate_tiles(candidates, admins, requested, feedback):
         minimum_exceptions[index] = (donor, code)
 
     feedback.pushInfo(
-        f"Selected {requested} tiles by land overlap; "
+        f"Selected {len(selected)} {country_iso3}-dominant tiles; "
         f"applied {len(minimum_exceptions)} minimum-representation exceptions"
     )
     return assignments, minimum_exceptions
@@ -204,7 +202,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         return "atlas"
 
     def shortHelpString(self):
-        return tr("Builds the deterministic 166-tile Korea GeoPackage, QGIS project, report and preview.")
+        return tr("Builds the deterministic dominant-overlap Korea GeoPackage, QGIS project, report and preview.")
 
     def createInstance(self):
         return AtlasKoreaBuild()
@@ -226,9 +224,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         settings = json.loads(config_path.read_text(encoding="utf-8"))
         admins = settings["admin1"]
         admin_by_code = {admin["code"]: admin for admin in admins}
-        expected_total = int(settings["grid"]["target_tile_count"])
-        if sum(int(item.get("minimum_tiles", 0)) for item in admins) > expected_total:
-            raise QgsProcessingException("Configured admin minimums exceed target tile count")
+        country_iso3 = settings["country"]["iso3"]
 
         source_path = resolve(root, settings["source"]["path"])
         gpkg_path = resolve(root, settings["outputs"]["geopackage"])
@@ -262,11 +258,17 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         admin_layer = memory_layer("MultiPolygon", target_crs, "admin1_source", admin_fields)
         admin_geometries = {}
         admin_source_names = {}
+        source_country_extent = None
         filter_field = settings["source"]["country_filter_field"]
         filter_value = settings["source"]["country_filter_value"]
         for feature in source_layer.getFeatures():
             if str(feature[filter_field]) != filter_value:
                 continue
+            feature_extent = feature.geometry().boundingBox()
+            if source_country_extent is None:
+                source_country_extent = QgsRectangle(feature_extent)
+            else:
+                source_country_extent.combineExtentWith(feature_extent)
             code = str(feature["iso_3166_2"])
             if code not in admin_by_code:
                 continue
@@ -283,6 +285,32 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             raise QgsProcessingException(
                 f"Expected all 17 configured admin areas. Missing={missing}, found={len(admin_geometries)}"
             )
+
+        # Build nearby country polygons from the same global Admin-1 source so
+        # border and coastal cells can compare countries and ocean consistently.
+        search_extent = QgsRectangle(source_country_extent)
+        search_extent.grow(float(settings["grid"]["nearby_country_search_buffer_degrees"]))
+        country_parts = {}
+        for feature in source_layer.getFeatures():
+            geometry = feature.geometry()
+            if geometry.isEmpty() or not geometry.boundingBox().intersects(search_extent):
+                continue
+            code = str(feature["adm0_a3"] or "")
+            if not code:
+                continue
+            transformed = QgsGeometry(geometry)
+            transformed.transform(transform)
+            if not transformed.isGeosValid():
+                transformed = transformed.makeValid()
+            if not transformed.isEmpty():
+                country_parts.setdefault(code, []).append(transformed)
+        country_geometries = {
+            code: QgsGeometry.unaryUnion(parts) for code, parts in country_parts.items()
+        }
+        if country_iso3 not in country_geometries:
+            raise QgsProcessingException(f"Country geometry missing for {country_iso3}")
+        nearby_land = QgsGeometry.unaryUnion(list(country_geometries.values()))
+        feedback.pushInfo(f"Nearby country competitors: {', '.join(sorted(country_geometries))}")
 
         land = QgsGeometry.unaryUnion(list(admin_geometries.values()))
         if not land.isGeosValid():
@@ -332,6 +360,23 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                     if area >= float(grid["candidate_min_overlap_m2"]):
                         overlaps[code] = area
                 land_area = sum(overlaps.values())
+                country_overlaps = {}
+                for code, country_geometry in country_geometries.items():
+                    if not geometry.boundingBox().intersects(country_geometry.boundingBox()):
+                        continue
+                    area = geometry.intersection(country_geometry).area()
+                    if area >= float(grid["candidate_min_overlap_m2"]):
+                        country_overlaps[code] = area
+                ocean_area = max(
+                    0.0,
+                    geometry.area() - geometry.intersection(nearby_land).area(),
+                )
+                territory_scores = dict(country_overlaps)
+                territory_scores[grid["ocean_code"]] = ocean_area
+                dominant_territory = sorted(
+                    territory_scores,
+                    key=lambda code: (-territory_scores[code], code),
+                )[0]
                 tile_id = f"KOR_{orientation[0].upper()}_R{row + 100000:06d}_C{col + 100000:06d}"
                 candidates.append(
                     {
@@ -343,6 +388,9 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                         "geometry": geometry,
                         "overlaps": overlaps,
                         "land_area": land_area,
+                        "country_overlaps": country_overlaps,
+                        "ocean_area": ocean_area,
+                        "dominant_territory": dominant_territory,
                     }
                 )
         feedback.pushInfo(
@@ -352,7 +400,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         feedback.setProgress(40)
 
         assignments, minimum_exceptions = allocate_tiles(
-            candidates, admins, expected_total, feedback
+            candidates, admins, country_iso3, feedback
         )
         overrides = load_overrides(override_path)
         override_reasons = {}
@@ -400,11 +448,14 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             ("grid_col", QVariant.Int),
             ("land_area_km2", QVariant.Double),
             ("land_ratio", QVariant.Double),
+            ("dominant_territory", QVariant.String),
+            ("ocean_ratio", QVariant.Double),
             ("best_admin", QVariant.String),
             ("best_overlap", QVariant.Double),
             ("selected", QVariant.Bool),
             ("assigned_admin", QVariant.String),
             ("assignment_method", QVariant.String),
+            ("country_scores_json", QVariant.String),
             ("scores_json", QVariant.String),
         ):
             candidate_fields.append(QgsField(name, kind))
@@ -421,6 +472,8 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                     candidate["tile_id"], candidate["row"], candidate["col"],
                     candidate["land_area"] / 1_000_000.0,
                     candidate["land_area"] / hex_area,
+                    candidate["dominant_territory"],
+                    candidate["ocean_area"] / hex_area,
                     best_admin, best_overlap / 1_000_000.0,
                     index in assignments, assignments.get(index),
                     (
@@ -428,6 +481,16 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                         else "minimum_representation" if index in minimum_exceptions
                         else "dominant_overlap"
                     ) if index in assignments else None,
+                    json.dumps(
+                        {
+                            **{
+                                code: round(area / 1_000_000.0, 6)
+                                for code, area in sorted(candidate["country_overlaps"].items())
+                            },
+                            grid["ocean_code"]: round(candidate["ocean_area"] / 1_000_000.0, 6),
+                        },
+                        ensure_ascii=False, separators=(",", ":"),
+                    ),
                     json.dumps(
                         {code: round(area / 1_000_000.0, 6) for code, area in sorted(candidate["overlaps"].items())},
                         ensure_ascii=False, separators=(",", ":"),
@@ -673,6 +736,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             f"Generated: {datetime.now(timezone.utc).isoformat()}", "",
             f"- Orientation: `{orientation}`", f"- Final tiles: **{len(selected_indexes)}**",
             f"- Target tile area: {settings['grid']['target_area_km2']} km2", "",
+            "- Country selection: dominant overlap among nearby countries and ocean; no fixed national total",
             "- Assignment policy: dominant administrative overlap with configured minimum representation",
             "- Target counts are advisory, not hard constraints", "",
             "| Code | Admin area | Target | Minimum | Actual | Difference |",

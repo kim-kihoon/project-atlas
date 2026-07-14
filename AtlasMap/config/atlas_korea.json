@@ -14,7 +14,6 @@
   },
   "grid": {
     "orientation": "pointy_top",
-    "target_tile_count": 166,
     "target_area_km2": 605.21,
     "side_length_m": 15262.55,
     "pointy_width_m": 26435.51,
@@ -24,7 +23,10 @@
     "origin_x": 500000.0,
     "origin_y": 1000000.0,
     "extent_buffer_m": 50000.0,
-    "candidate_min_overlap_m2": 1.0
+    "candidate_min_overlap_m2": 1.0,
+    "country_assignment": "dominant_overlap_including_ocean",
+    "ocean_code": "OCEAN",
+    "nearby_country_search_buffer_degrees": 3.0
   },
   "validation": {
     "area_relative_tolerance": 0.0005,
