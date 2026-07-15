@@ -12,6 +12,18 @@ Each configured admin area is guaranteed one tile only when dominant-overlap
 assignment would otherwise leave it unrepresented. Historical target counts
 are advisory report values.
 
+Administrative ownership and city type are independent. For example, a tile
+containing Yongin remains owned by Gyeonggi (`admin1_code=KR-41`) while its
+population-based `city_class` can be `metropolis`. City status changes fill
+color, never administrative borders.
+
+Tile display names are a third independent dimension. Each tile normally uses
+the city or county occupying its largest area. A missing unit is reviewed in
+population order and may receive one representative tile only when it occupies
+at least 5% of that hex, has a larger known population than the current name,
+and the current unit retains another tile. This population exception changes
+only the display name.
+
 ## Quick start (macOS)
 
 From this directory:
@@ -36,8 +48,8 @@ path of `qgis_process.exe` before running either launcher.
 ## Main outputs
 
 - `Atlas_Korea.qgz`: QGIS project; open this first in QGIS.
-- `data/processed/Atlas_Korea.gpkg`: source, candidates, final tiles, and city
-  marker layers.
+- `data/processed/Atlas_Korea.gpkg`: source, city/county naming reference,
+  candidates, final tiles, and city marker layers.
 - `previews/Atlas_Korea_Overview.png`: rendered overview.
 - `reports/allocation_report.md`: target and actual tile allocation.
 - `reports/validation_report.md`: release-gate validation results.

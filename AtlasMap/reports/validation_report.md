@@ -1,6 +1,6 @@
 # Atlas Korea validation report
 
-Generated: 2026-07-14T23:29:52.656808+00:00
+Generated: 2026-07-15T00:01:58.240387+00:00
 
 Overall result: **PASS**
 
@@ -18,6 +18,14 @@ Overall result: **PASS**
 | Derived final tile count | PASS | actual=160, derived=160 |
 | Assignment methods | PASS | invalid=[] |
 | Dominant-overlap assignments | PASS | mismatches=[] |
+| Tile naming fields | PASS | missing=[] |
+| Every tile has one display name | PASS | blank=[] |
+| Tile naming methods | PASS | invalid=[] |
+| Naming reference layer | PASS | units=161 |
+| Maximum-overlap default names | PASS | mismatches=[] |
+| Population naming exceptions | PASS | invalid=[] |
+| Population-based city markers | PASS | markers=23, invalid=[] |
+| City class independent from admin ownership | PASS | mismatches=[] |
 | Valid geometries | PASS | invalid=[] |
 | Complete regular hexagons | PASS | invalid=[] |
 | Hex target area | PASS | outside_tolerance=[] |

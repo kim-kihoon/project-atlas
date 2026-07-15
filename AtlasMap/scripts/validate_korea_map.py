@@ -186,6 +186,118 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         check("Assignment methods", not invalid_methods, f"invalid={invalid_methods}")
         check("Dominant-overlap assignments", not dominant_mismatches, f"mismatches={dominant_mismatches}")
 
+        required_naming_fields = {
+            "tile_name_code", "tile_name_ko", "tile_name_en", "tile_name_method",
+            "tile_name_population", "tile_name_overlap_km2", "tile_name_previous_code",
+            "tile_name_previous_population", "map_class",
+        }
+        missing_naming_fields = sorted(required_naming_fields - set(layer.fields().names()))
+        check("Tile naming fields", not missing_naming_fields, f"missing={missing_naming_fields}")
+        blank_names = [
+            str(feature["tile_id"]) for feature in features
+            if not str(feature["tile_name_code"] or "").strip()
+            or not str(feature["tile_name_ko"] or "").strip()
+            or not str(feature["tile_name_en"] or "").strip()
+        ] if not missing_naming_fields else ids
+        check("Every tile has one display name", not blank_names, f"blank={blank_names}")
+        allowed_naming_methods = {"dominant_overlap", "population_representation"}
+        invalid_naming_methods = [
+            (str(feature["tile_id"]), str(feature["tile_name_method"] or ""))
+            for feature in features
+            if str(feature["tile_name_method"] or "") not in allowed_naming_methods
+        ] if not missing_naming_fields else []
+        check("Tile naming methods", not invalid_naming_methods, f"invalid={invalid_naming_methods}")
+
+        naming_layer = QgsVectorLayer(
+            f"{gpkg}|layername=admin2_naming_source", "admin2_naming_source", "ogr"
+        )
+        naming_features = list(naming_layer.getFeatures()) if naming_layer.isValid() else []
+        naming_by_code = {
+            str(feature["unit_code"]): feature for feature in naming_features
+        }
+        check("Naming reference layer", naming_layer.isValid() and bool(naming_features),
+              f"units={len(naming_features)}")
+        dominant_name_mismatches = []
+        for tile in features:
+            if str(tile["tile_name_method"] or "") != "dominant_overlap":
+                continue
+            scores = {}
+            for unit in naming_features:
+                if not tile.geometry().boundingBox().intersects(unit.geometry().boundingBox()):
+                    continue
+                area = tile.geometry().intersection(unit.geometry()).area()
+                if area > 0:
+                    scores[str(unit["unit_code"])] = area
+            expected = sorted(scores, key=lambda code: (-scores[code], code))[0] if scores else ""
+            if str(tile["tile_name_code"] or "") != expected:
+                dominant_name_mismatches.append((str(tile["tile_id"]), expected))
+        check("Maximum-overlap default names", not dominant_name_mismatches,
+              f"mismatches={dominant_name_mismatches}")
+
+        final_name_counts = Counter(str(feature["tile_name_code"] or "") for feature in features)
+        exception_errors = []
+        minimum_share = float(settings["tile_naming"]["minimum_tile_share"])
+        for tile in features:
+            if str(tile["tile_name_method"] or "") != "population_representation":
+                continue
+            code = str(tile["tile_name_code"] or "")
+            previous = str(tile["tile_name_previous_code"] or "")
+            population = int(tile["tile_name_population"] or 0)
+            previous_population = int(tile["tile_name_previous_population"] or 0)
+            overlap_share = (
+                float(tile["tile_name_overlap_km2"] or 0.0)
+                / float(tile["area_km2"] or 1.0)
+            )
+            if (
+                code not in naming_by_code or previous not in naming_by_code
+                or population <= previous_population or previous_population <= 0
+                or overlap_share + 1e-9 < minimum_share
+                or final_name_counts.get(previous, 0) < 1
+            ):
+                exception_errors.append(
+                    (str(tile["tile_id"]), population, previous_population, round(overlap_share, 4))
+                )
+        check("Population naming exceptions", not exception_errors, f"invalid={exception_errors}")
+
+        city_layer = QgsVectorLayer(f"{gpkg}|layername=city_markers", "city_markers", "ogr")
+        city_features = list(city_layer.getFeatures()) if city_layer.isValid() else []
+        city_min = int(settings["city_classification"]["city_population_min"])
+        metropolis_min = int(settings["city_classification"]["metropolis_population_min"])
+        invalid_city_markers = []
+        representative_by_tile = {}
+        for city in city_features:
+            population = int(city["population"] or 0)
+            expected_class = "metropolis" if population >= metropolis_min else "city"
+            if population < city_min or str(city["city_class"] or "") != expected_class:
+                invalid_city_markers.append(str(city["city_id"]))
+            tile_id = str(city["tile_id"] or "")
+            rank = (
+                1 if bool(city["is_capital"]) else 0,
+                population,
+                str(city["city_name_en"] or "").lower().replace(" ", "-"),
+            )
+            if tile_id not in representative_by_tile or rank > representative_by_tile[tile_id][0]:
+                representative_by_tile[tile_id] = (rank, city)
+        check("Population-based city markers", city_layer.isValid() and not invalid_city_markers,
+              f"markers={len(city_features)}, invalid={invalid_city_markers}")
+        tile_city_mismatches = []
+        for tile in features:
+            tile_id = str(tile["tile_id"])
+            representative = representative_by_tile.get(tile_id)
+            if representative:
+                city = representative[1]
+                expected_map_class = "capital" if bool(city["is_capital"]) else str(city["city_class"])
+                if (
+                    str(tile["city_name_ko"] or "") != str(city["city_name_ko"] or "")
+                    or str(tile["city_class"] or "") != str(city["city_class"] or "")
+                    or str(tile["map_class"] or "") != expected_map_class
+                ):
+                    tile_city_mismatches.append(tile_id)
+            elif str(tile["map_class"] or "") != str(tile["admin1_code"] or ""):
+                tile_city_mismatches.append(tile_id)
+        check("City class independent from admin ownership", not tile_city_mismatches,
+              f"mismatches={tile_city_mismatches}")
+
         target_area = float(settings["grid"]["target_area_km2"])
         area_tolerance = float(validation["area_relative_tolerance"])
         edge_tolerance = float(validation["regular_edge_relative_tolerance"])

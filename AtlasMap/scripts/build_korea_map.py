@@ -3,9 +3,12 @@
 from collections import Counter
 from datetime import datetime, timezone
 import csv
+import io
 import json
 import math
 from pathlib import Path
+import re
+import zipfile
 
 from qgis.PyQt.QtCore import QCoreApplication, QSize, QVariant
 from qgis.PyQt.QtGui import QColor
@@ -23,7 +26,9 @@ from qgis.core import (
     QgsLineSymbol,
     QgsMapRendererParallelJob,
     QgsMapSettings,
+    QgsMarkerSymbol,
     QgsPalLayerSettings,
+    QgsPointXY,
     QgsProcessing,
     QgsProcessingAlgorithm,
     QgsProcessingException,
@@ -70,6 +75,251 @@ def make_hexagon(cx, cy, side, orientation):
         points.append(QgsPointXY(cx + side * math.cos(angle), cy + side * math.sin(angle)))
     points.append(points[0])
     return QgsGeometry.fromPolygonXY([points])
+
+
+def load_city_source(root, settings):
+    source = settings["city_source"]
+    archive_path = resolve(root, source["path"])
+    if not archive_path.exists():
+        raise QgsProcessingException(f"City source does not exist: {archive_path}")
+    aliases = source.get("canonical_aliases", {})
+    korean_names = source["names_ko"]
+    selected = {}
+    with zipfile.ZipFile(archive_path) as archive:
+        with archive.open(source["member"]) as raw:
+            reader = csv.reader(io.TextIOWrapper(raw, encoding="utf-8"), delimiter="\t")
+            for row in reader:
+                if len(row) < 19 or row[8] != source["country_code"]:
+                    continue
+                try:
+                    population = int(row[14] or 0)
+                    latitude = float(row[4])
+                    longitude = float(row[5])
+                except ValueError:
+                    continue
+                if population < int(source["minimum_population"]):
+                    continue
+                ascii_name = row[2].strip()
+                feature_class, feature_code = row[6], row[7]
+                is_city_place = feature_class == "P"
+                is_city_admin = feature_code == "ADM2" and ascii_name.lower().endswith("-si")
+                if not (is_city_place or is_city_admin):
+                    continue
+                canonical = re.sub(r"-si$", "", ascii_name.lower()).replace(" ", "-")
+                canonical = aliases.get(canonical, canonical)
+                if canonical not in korean_names:
+                    raise QgsProcessingException(
+                        f"Missing Korean city-name mapping for {ascii_name} ({canonical})"
+                    )
+                record = {
+                    "city_id": row[0], "canonical": canonical,
+                    "name_ko": korean_names[canonical],
+                    "name_en": canonical.replace("-", " ").title(),
+                    "latitude": latitude, "longitude": longitude,
+                    "population": population, "feature_code": feature_code,
+                    "admin1_source_code": row[10], "source_date": row[18],
+                }
+                previous = selected.get(canonical)
+                if previous is None or (population, row[0]) > (previous["population"], previous["city_id"]):
+                    selected[canonical] = record
+    if not selected:
+        raise QgsProcessingException("No qualifying cities found in GeoNames source")
+    return [selected[key] for key in sorted(selected)]
+
+
+def normalized_unit_name(value):
+    value = re.sub(r"\s*\[[^]]*\]\s*", "", value.strip().lower())
+    value = value.replace(" district", "").replace("county", "")
+    value = re.sub(r"-(si|gun|gu)$", "", value)
+    return re.sub(r"[^a-z0-9]+", "-", value).strip("-")
+
+
+def display_unit_name(value):
+    value = re.sub(r"\s*\[[^]]*\]\s*", "", value.strip())
+    return re.sub(r"-(si|gun|gu)$", "", value, flags=re.IGNORECASE)
+
+
+def load_admin2_population(root, settings):
+    """Load comparable ADM2 population and Korean names from GeoNames."""
+    city_source = settings["city_source"]
+    naming = settings["tile_naming"]
+    archive_path = resolve(root, city_source["path"])
+    records = {}
+    ids = set()
+    with zipfile.ZipFile(archive_path) as archive:
+        with archive.open(city_source["member"]) as raw:
+            reader = csv.reader(io.TextIOWrapper(raw, encoding="utf-8"), delimiter="\t")
+            for row in reader:
+                if len(row) < 19 or row[8] != city_source["country_code"] or row[7] != "ADM2":
+                    continue
+                admin_code = naming["geonames_admin1_codes"].get(row[10])
+                if not admin_code:
+                    continue
+                try:
+                    population = int(row[14] or 0)
+                except ValueError:
+                    population = 0
+                key = (admin_code, normalized_unit_name(row[2]))
+                record = {
+                    "geoname_id": row[0], "population": population,
+                    "name_en": display_unit_name(row[2]), "name_ko": None,
+                }
+                previous = records.get(key)
+                if previous is None or (population, row[0]) > (
+                    previous["population"], previous["geoname_id"]
+                ):
+                    records[key] = record
+                ids.add(row[0])
+
+    korean = {}
+    alternate_path = resolve(root, naming["alternate_names_path"])
+    with zipfile.ZipFile(alternate_path) as archive:
+        with archive.open(naming["alternate_names_member"]) as raw:
+            reader = csv.reader(io.TextIOWrapper(raw, encoding="utf-8"), delimiter="\t")
+            for row in reader:
+                if (
+                    len(row) < 4 or row[1] not in ids
+                    or (row[2] != "ko" and not re.search(r"[가-힣]", row[3]))
+                ):
+                    continue
+                value = re.sub(r"(특별자치)?(시|군|구)$", "", row[3].strip())
+                if not value:
+                    continue
+                preferred = len(row) > 4 and row[4] == "1"
+                current = korean.get(row[1])
+                score = (1 if row[2] == "ko" else 0, 1 if preferred else 0, -len(value), value)
+                if current is None or score > current[0]:
+                    korean[row[1]] = (score, value)
+    for record in records.values():
+        match = korean.get(record["geoname_id"])
+        if match:
+            record["name_ko"] = match[1]
+    return records
+
+
+def build_naming_units(root, settings, target_crs, context, admin_geometries, city_records):
+    naming = settings["tile_naming"]
+    source_path = resolve(root, naming["boundary_path"])
+    source_layer = QgsVectorLayer(str(source_path), "geoboundaries_admin2", "ogr")
+    if not source_layer.isValid():
+        raise QgsProcessingException(f"Invalid naming boundary layer: {source_path}")
+    transform = QgsCoordinateTransform(source_layer.crs(), target_crs, context.transformContext())
+    populations = load_admin2_population(root, settings)
+    admin_by_code = {item["code"]: item for item in settings["admin1"]}
+    aggregate_codes = set(naming["aggregate_admin1_codes"])
+    city_by_name = {item["canonical"]: item for item in city_records}
+    parts = {}
+    for feature in source_layer.getFeatures():
+        geometry = QgsGeometry(feature.geometry())
+        geometry.transform(transform)
+        if not geometry.isGeosValid():
+            geometry = geometry.makeValid()
+        if geometry.isEmpty():
+            continue
+        admin_scores = {
+            code: geometry.intersection(admin_geometry).area()
+            for code, admin_geometry in admin_geometries.items()
+            if geometry.boundingBox().intersects(admin_geometry.boundingBox())
+        }
+        if not admin_scores:
+            continue
+        source_name = str(feature["shapeName"])
+        canonical = normalized_unit_name(source_name)
+        documented_admins = sorted(code for code, name in populations if name == canonical)
+        if len(documented_admins) == 1:
+            admin_code = documented_admins[0]
+        else:
+            eligible_admins = documented_admins or sorted(admin_scores)
+            admin_code = sorted(
+                eligible_admins, key=lambda code: (-admin_scores.get(code, 0.0), code)
+            )[0]
+        if admin_code in aggregate_codes:
+            admin = admin_by_code[admin_code]
+            canonical = normalized_unit_name(admin["name_en"])
+            unit_code = f"{admin_code}:{canonical}"
+            city = city_by_name.get(canonical)
+            values = {
+                "unit_code": unit_code, "admin1_code": admin_code,
+                "name_ko": admin["name_ko"], "name_en": admin["name_en"],
+                "population": city["population"] if city else 0,
+                "population_known": bool(city), "source_names": set(), "geometries": [],
+            }
+        else:
+            unit_code = f"{admin_code}:{canonical}"
+            population = populations.get((admin_code, canonical), {})
+            values = {
+                "unit_code": unit_code, "admin1_code": admin_code,
+                "name_ko": population.get("name_ko") or display_unit_name(source_name),
+                "name_en": display_unit_name(source_name),
+                "population": int(population.get("population", 0)),
+                "population_known": int(population.get("population", 0)) > 0,
+                "source_names": set(), "geometries": [],
+            }
+        unit = parts.setdefault(unit_code, values)
+        unit["source_names"].add(source_name)
+        unit["geometries"].append(geometry)
+    units = []
+    for unit_code in sorted(parts):
+        unit = parts[unit_code]
+        unit["geometry"] = QgsGeometry.unaryUnion(unit.pop("geometries"))
+        unit["source_names"] = ", ".join(sorted(unit["source_names"]))
+        units.append(unit)
+    if not units:
+        raise QgsProcessingException("No tile naming units were built")
+    return units
+
+
+def allocate_tile_names(candidates, selected_indexes, units, minimum_share, feedback):
+    """Use maximum area, then give higher-population missing units one safe tile."""
+    unit_by_code = {unit["unit_code"]: unit for unit in units}
+    overlaps = {}
+    assignments = {}
+    for index in selected_indexes:
+        tile = candidates[index]
+        scores = {}
+        for unit in units:
+            geometry = unit["geometry"]
+            if not tile["geometry"].boundingBox().intersects(geometry.boundingBox()):
+                continue
+            area = tile["geometry"].intersection(geometry).area()
+            if area > 0:
+                scores[unit["unit_code"]] = area
+        if not scores:
+            raise QgsProcessingException(f"No naming unit overlaps {tile['tile_id']}")
+        overlaps[index] = scores
+        assignments[index] = sorted(scores, key=lambda code: (-scores[code], code))[0]
+
+    counts = Counter(assignments.values())
+    exceptions = {}
+    missing = [unit for unit in units if counts[unit["unit_code"]] == 0 and unit["population_known"]]
+    missing.sort(key=lambda unit: (-unit["population"], unit["unit_code"]))
+    for unit in missing:
+        code = unit["unit_code"]
+        options = []
+        for index in selected_indexes:
+            area = overlaps[index].get(code, 0.0)
+            share = area / candidates[index]["geometry"].area()
+            if share < minimum_share:
+                continue
+            holder_code = assignments[index]
+            holder = unit_by_code[holder_code]
+            if counts[holder_code] <= 1 or not holder["population_known"]:
+                continue
+            if unit["population"] <= holder["population"]:
+                continue
+            options.append((-area, -share, candidates[index]["tile_id"], index, holder_code))
+        if not options:
+            continue
+        _, _, _, index, holder_code = sorted(options)[0]
+        assignments[index] = code
+        counts[holder_code] -= 1
+        counts[code] += 1
+        exceptions[index] = holder_code
+    feedback.pushInfo(
+        f"Named {len(selected_indexes)} tiles from {len(units)} units; "
+        f"applied {len(exceptions)} population-representation exceptions"
+    )
+    return assignments, overlaps, exceptions
 
 
 def allocate_tiles(candidates, admins, country_iso3, feedback):
@@ -441,6 +691,60 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         for value in neighbors.values():
             value.sort()
 
+        city_records = load_city_source(root, settings)
+        naming_units = build_naming_units(
+            root, settings, target_crs, context, admin_geometries, city_records
+        )
+        tile_name_assignments, tile_name_overlaps, naming_exceptions = allocate_tile_names(
+            candidates, selected_indexes, naming_units,
+            float(settings["tile_naming"]["minimum_tile_share"]), feedback,
+        )
+        naming_unit_by_code = {unit["unit_code"]: unit for unit in naming_units}
+
+        city_crs = QgsCoordinateReferenceSystem("EPSG:4326")
+        city_transform = QgsCoordinateTransform(city_crs, target_crs, context.transformContext())
+        city_by_tile = {}
+        city_classes = settings["city_classification"]
+        for city in city_records:
+            point = city_transform.transform(QgsPointXY(city["longitude"], city["latitude"]))
+            geometry = QgsGeometry.fromPointXY(point)
+            containing = [
+                index for index in selected_indexes
+                if candidates[index]["geometry"].contains(geometry)
+                or candidates[index]["geometry"].intersects(geometry)
+            ]
+            if containing:
+                tile_index = sorted(containing, key=lambda index: candidates[index]["tile_id"])[0]
+            else:
+                tile_index = min(
+                    selected_indexes,
+                    key=lambda index: (
+                        candidates[index]["geometry"].distance(geometry),
+                        candidates[index]["tile_id"],
+                    ),
+                )
+            city_class = (
+                "metropolis" if city["population"] >= int(city_classes["metropolis_population_min"])
+                else "city"
+            )
+            city.update(
+                {
+                    "geometry": geometry, "tile_index": tile_index,
+                    "tile_id": candidates[tile_index]["tile_id"],
+                    "admin1_code": assignments[tile_index],
+                    "city_class": city_class,
+                    "is_capital": city["city_id"] == settings["city_source"]["capital_geoname_id"],
+                }
+            )
+            current = city_by_tile.get(tile_index)
+            rank = (1 if city["is_capital"] else 0, city["population"], city["canonical"])
+            current_rank = (
+                (1 if current["is_capital"] else 0, current["population"], current["canonical"])
+                if current else None
+            )
+            if current is None or rank > current_rank:
+                city_by_tile[tile_index] = city
+
         candidate_fields = QgsFields()
         for name, kind in (
             ("candidate_id", QVariant.String),
@@ -510,6 +814,13 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             ("neighbor_ids", QVariant.String), ("population", QVariant.LongLong),
             ("city_name_ko", QVariant.String), ("city_name_en", QVariant.String),
             ("city_class", QVariant.String), ("is_capital", QVariant.Bool),
+            ("map_class", QVariant.String),
+            ("tile_name_code", QVariant.String), ("tile_name_ko", QVariant.String),
+            ("tile_name_en", QVariant.String), ("tile_name_method", QVariant.String),
+            ("tile_name_population", QVariant.LongLong),
+            ("tile_name_overlap_km2", QVariant.Double),
+            ("tile_name_previous_code", QVariant.String),
+            ("tile_name_previous_population", QVariant.LongLong),
             ("district_slots", QVariant.Int), ("district_1", QVariant.String),
             ("district_2", QVariant.String), ("district_3", QVariant.String),
             ("primary_industry", QVariant.String), ("terrain", QVariant.String),
@@ -526,6 +837,13 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             candidate = candidates[index]
             code = assignments[index]
             admin = admin_by_code[code]
+            naming_code = tile_name_assignments[index]
+            naming_unit = naming_unit_by_code[naming_code]
+            naming_overlap = tile_name_overlaps[index].get(naming_code, 0.0)
+            city = city_by_tile.get(index)
+            city_class = city["city_class"] if city else None
+            is_capital = bool(city and city["is_capital"])
+            district_slots = 3 if city_class == "metropolis" else 2 if city_class == "city" else 1
             overlap = candidate["overlaps"].get(code, 0.0)
             feature = QgsFeature(tile_layer.fields())
             feature.setGeometry(candidate["geometry"])
@@ -537,6 +855,27 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 "is_coastal": candidate["land_area"] / candidate["geometry"].area() < 0.999,
                 "center_x": candidate["cx"], "center_y": candidate["cy"],
                 "neighbor_ids": json.dumps(neighbors[candidate["tile_id"]], separators=(",", ":")),
+                "population": city["population"] if city else None,
+                "city_name_ko": city["name_ko"] if city else None,
+                "city_name_en": city["name_en"] if city else None,
+                "city_class": city_class, "is_capital": is_capital,
+                "map_class": "capital" if is_capital else city_class or code,
+                "tile_name_code": naming_code,
+                "tile_name_ko": naming_unit["name_ko"],
+                "tile_name_en": naming_unit["name_en"],
+                "tile_name_method": (
+                    "population_representation" if index in naming_exceptions else "dominant_overlap"
+                ),
+                "tile_name_population": (
+                    naming_unit["population"] if naming_unit["population_known"] else None
+                ),
+                "tile_name_overlap_km2": naming_overlap / 1_000_000.0,
+                "tile_name_previous_code": naming_exceptions.get(index),
+                "tile_name_previous_population": (
+                    naming_unit_by_code[naming_exceptions[index]]["population"]
+                    if index in naming_exceptions else None
+                ),
+                "district_slots": district_slots,
                 "source_year": int(settings["source"]["source_year"]),
                 "manual_override": candidate["tile_id"] in override_reasons,
                 "assignment_method": (
@@ -570,10 +909,49 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             ("city_id", QVariant.String), ("city_name_ko", QVariant.String),
             ("city_name_en", QVariant.String), ("population", QVariant.LongLong),
             ("city_class", QVariant.String), ("is_capital", QVariant.Bool),
+            ("tile_id", QVariant.String), ("admin1_code", QVariant.String),
             ("source_year", QVariant.Int), ("source_url", QVariant.String),
         ):
             city_fields.append(QgsField(name, kind))
         city_layer = memory_layer("Point", target_crs, "city_markers", city_fields)
+        city_features = []
+        for city in city_records:
+            feature = QgsFeature(city_layer.fields())
+            feature.setGeometry(city["geometry"])
+            feature.setAttributes(
+                [
+                    city["city_id"], city["name_ko"], city["name_en"], city["population"],
+                    city["city_class"], city["is_capital"], city["tile_id"], city["admin1_code"],
+                    int(city["source_date"][:4]) if city["source_date"][:4].isdigit() else None,
+                    "https://www.geonames.org/export/",
+                ]
+            )
+            city_features.append(feature)
+        city_layer.dataProvider().addFeatures(city_features)
+
+        naming_fields = QgsFields()
+        for name, kind in (
+            ("unit_code", QVariant.String), ("admin1_code", QVariant.String),
+            ("name_ko", QVariant.String), ("name_en", QVariant.String),
+            ("population", QVariant.LongLong), ("population_known", QVariant.Bool),
+            ("source_names", QVariant.String), ("source_year", QVariant.Int),
+        ):
+            naming_fields.append(QgsField(name, kind))
+        naming_layer = memory_layer("MultiPolygon", target_crs, "admin2_naming_source", naming_fields)
+        naming_features = []
+        for unit in naming_units:
+            feature = QgsFeature(naming_layer.fields())
+            feature.setGeometry(unit["geometry"])
+            feature.setAttributes(
+                [
+                    unit["unit_code"], unit["admin1_code"], unit["name_ko"], unit["name_en"],
+                    unit["population"] if unit["population_known"] else None,
+                    unit["population_known"], unit["source_names"],
+                    int(settings["tile_naming"]["boundary_year"]),
+                ]
+            )
+            naming_features.append(feature)
+        naming_layer.dataProvider().addFeatures(naming_features)
 
         border_fields = QgsFields()
         for name, kind in (
@@ -609,6 +987,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         write_gpkg_layer(candidate_layer, gpkg_path, "hex_candidates", False)
         write_gpkg_layer(tile_layer, gpkg_path, "korea_tiles", False)
         write_gpkg_layer(city_layer, gpkg_path, "city_markers", False)
+        write_gpkg_layer(naming_layer, gpkg_path, "admin2_naming_source", False)
         write_gpkg_layer(border_layer, gpkg_path, "admin1_tile_borders", False)
         write_gpkg_layer(coast_layer, gpkg_path, "coastal_tile_outlines", False)
         feedback.pushInfo(f"Wrote GeoPackage: {gpkg_path}")
@@ -620,27 +999,41 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         persisted_admin_labels = QgsVectorLayer(f"{gpkg_path}|layername=admin1_source", "Admin names and tile counts", "ogr")
         persisted_candidates = QgsVectorLayer(f"{gpkg_path}|layername=hex_candidates", "Hex candidates", "ogr")
         persisted_cities = QgsVectorLayer(f"{gpkg_path}|layername=city_markers", "City markers", "ogr")
+        persisted_naming = QgsVectorLayer(
+            f"{gpkg_path}|layername=admin2_naming_source", "City-county naming reference", "ogr"
+        )
         persisted_borders = QgsVectorLayer(f"{gpkg_path}|layername=admin1_tile_borders", "Game admin borders", "ogr")
         persisted_coast = QgsVectorLayer(f"{gpkg_path}|layername=coastal_tile_outlines", "Coastal tile outlines", "ogr")
         for layer in (
             persisted_tiles, persisted_admin, persisted_admin_labels, persisted_candidates,
-            persisted_cities, persisted_borders, persisted_coast,
+            persisted_cities, persisted_naming, persisted_borders, persisted_coast,
         ):
             if not layer.isValid():
                 raise QgsProcessingException(f"Failed to reload persisted layer: {layer.name()}")
 
         categories = []
+        class_colors = settings["city_classification"]["colors"]
+        for value, label in (
+            ("capital", "수도"), ("metropolis", "인구 100만 이상"),
+            ("city", "인구 50만 이상 100만 미만"),
+        ):
+            symbol = QgsFillSymbol.createSimple(
+                {"color": class_colors[value], "outline_color": "#36454f", "outline_width": "0.35"}
+            )
+            categories.append(QgsRendererCategory(value, symbol, label))
         for admin in admins:
             symbol = QgsFillSymbol.createSimple(
                 {"color": admin["color"], "outline_color": "#36454f", "outline_width": "0.35"}
             )
             categories.append(QgsRendererCategory(admin["code"], symbol, admin["name_ko"]))
-        persisted_tiles.setRenderer(QgsCategorizedSymbolRenderer("admin1_code", categories))
+        persisted_tiles.setRenderer(QgsCategorizedSymbolRenderer("map_class", categories))
         label_settings = QgsPalLayerSettings()
-        label_settings.fieldName = "tile_id"
-        label_settings.isExpression = False
+        label_settings.fieldName = (
+            "tile_name_ko || CASE WHEN @map_scale < 350000 THEN '\\n' || tile_id ELSE '' END"
+        )
+        label_settings.isExpression = True
         label_settings.scaleVisibility = True
-        label_settings.maximumScale = 750000
+        label_settings.maximumScale = 1600000
         label_format = QgsTextFormat()
         label_format.setSize(7)
         label_format.setColor(QColor("#202020"))
@@ -692,6 +1085,36 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 )
             )
         )
+        persisted_cities.setRenderer(
+            QgsSingleSymbolRenderer(
+                QgsMarkerSymbol.createSimple(
+                    {"name": "circle", "color": "#ffffff", "outline_color": "#202020", "size": "2.4"}
+                )
+            )
+        )
+        city_labels = QgsPalLayerSettings()
+        city_labels.fieldName = "city_name_ko"
+        city_labels.isExpression = False
+        city_labels.scaleVisibility = True
+        city_labels.maximumScale = 900000
+        city_text = QgsTextFormat()
+        city_text.setSize(8)
+        city_text.setColor(QColor("#202020"))
+        city_buffer = QgsTextBufferSettings()
+        city_buffer.setEnabled(True)
+        city_buffer.setSize(0.7)
+        city_buffer.setColor(QColor("white"))
+        city_text.setBuffer(city_buffer)
+        city_labels.setFormat(city_text)
+        persisted_cities.setLabeling(QgsVectorLayerSimpleLabeling(city_labels))
+        persisted_cities.setLabelsEnabled(True)
+        persisted_naming.setRenderer(
+            QgsSingleSymbolRenderer(
+                QgsFillSymbol.createSimple(
+                    {"color": "0,0,0,0", "outline_color": "#777777", "outline_width": "0.2"}
+                )
+            )
+        )
 
         project = QgsProject()
         project.setCrs(target_crs)
@@ -715,21 +1138,19 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         game_group.addLayer(persisted_coast)
         project.addMapLayer(persisted_admin, False)
         project.addMapLayer(persisted_candidates, False)
+        project.addMapLayer(persisted_naming, False)
         reference_group.addLayer(persisted_admin)
         reference_group.addLayer(persisted_candidates)
+        reference_group.addLayer(persisted_naming)
         reference_group.setItemVisibilityChecked(False)
         project.setFileName(str(project_path))
         if not project.write():
             raise QgsProcessingException(f"Failed to write QGIS project: {project_path}")
 
-        # The overview intentionally omits detailed tile IDs. They remain
-        # scale-dependent labels in the interactive QGIS project.
-        persisted_tiles.setLabelsEnabled(False)
         render_preview(
             [persisted_admin_labels, persisted_borders, persisted_coast, persisted_tiles],
             preview_path,
         )
-        persisted_tiles.setLabelsEnabled(True)
 
         report_lines = [
             "# Atlas Korea tile allocation report", "",
@@ -761,6 +1182,43 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 )
         else:
             report_lines.append("- None")
+        report_lines.extend(["", "## Tile naming", ""])
+        report_lines.extend(
+            [
+                "- Default: city/county with the largest hex overlap",
+                f"- Minimum overlap share for a population exception: "
+                f"{float(settings['tile_naming']['minimum_tile_share']):.0%}",
+                "- Exception: a missing higher-population unit may take one overlapping tile only "
+                "when the current unit keeps at least one other tile",
+                f"- Naming units: {len(naming_units)}",
+                f"- Population-representation exceptions: {len(naming_exceptions)}",
+                "",
+            ]
+        )
+        if naming_exceptions:
+            for index, previous_code in sorted(
+                naming_exceptions.items(), key=lambda item: candidates[item[0]]["tile_id"]
+            ):
+                assigned_unit = naming_unit_by_code[tile_name_assignments[index]]
+                previous_unit = naming_unit_by_code[previous_code]
+                report_lines.append(
+                    f"- `{candidates[index]['tile_id']}`: `{previous_unit['name_ko']}` "
+                    f"({previous_unit['population']:,}) -> `{assigned_unit['name_ko']}` "
+                    f"({assigned_unit['population']:,}); overlap "
+                    f"{tile_name_overlaps[index][assigned_unit['unit_code']] / 1_000_000.0:.2f} km2"
+                )
+        else:
+            report_lines.append("- None")
+        city_counts = Counter(city["city_class"] for city in city_records)
+        report_lines.extend(
+            [
+                "", "## Population-based city classes", "",
+                "City class changes tile fill only; administrative ownership and borders remain separate.", "",
+                f"- Capital markers: {sum(1 for city in city_records if city['is_capital'])}",
+                f"- Metropolis markers (1,000,000+): {city_counts.get('metropolis', 0)}",
+                f"- City markers (500,000-999,999): {city_counts.get('city', 0)}",
+            ]
+        )
         boundary_tiles = []
         for index in selected_indexes:
             candidate = candidates[index]

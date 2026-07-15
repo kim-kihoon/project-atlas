@@ -20,3 +20,46 @@ The archive and extracted original files are preserved unchanged. Generated,
 filtered, repaired, and reprojected layers belong in
 `data/processed/Atlas_Korea.gpkg`.
 
+## GeoNames Republic of Korea place data
+
+- Provider: GeoNames geographical database
+- URL: https://download.geonames.org/export/dump/KR.zip
+- Downloaded: 2026-07-15 (Asia/Seoul)
+- Original archive: `KR.zip`
+- SHA-256: `39a040976726f385f61d70dacf6f3d6c0793fe3bfe13545bc459efdf482be08a`
+- Archive member used: `KR.txt`
+- Selection: population at least 500,000 and either feature class `P`, or an
+  `ADM2` feature whose ASCII name ends in `-si`; duplicate city names are
+  collapsed using the highest recorded population.
+- Population meaning: GeoNames' recorded population value; it is used for map
+  classification and is not claimed to be a synchronized Korean census value.
+- License: GeoNames data is provided under Creative Commons Attribution 4.0.
+- Download reference archive retained during source evaluation:
+  `cities500.zip`, SHA-256
+  `28b72bbe2a9e010de46cc4f34121f2dd0f6b5c9f0829d71242d8f1a64e0c496e`.
+
+## geoBoundaries Republic of Korea ADM2
+
+- Provider: geoBoundaries, `gbOpen`, boundary ID `KOR-ADM2-91817680`
+- Source: https://www.geoboundaries.org/api/current/gbOpen/KOR/ADM2/
+- Pinned file: https://github.com/wmgeolab/geoBoundaries/raw/9469f09/releaseData/gbOpen/KOR/ADM2/geoBoundaries-KOR-ADM2.geojson
+- Downloaded: 2026-07-15 (Asia/Seoul)
+- Boundary reference year: 2020
+- Original file: `geoBoundaries-KOR-ADM2.geojson`
+- SHA-256: `c367911b02f2cd7dcae6512087d84965131971de0c9def2fc5d0ed9a7392f2d8`
+- License recorded by the provider for this boundary: CC BY 3.0
+- Use: city/county overlap geometry for tile display names. Districts belonging
+  to a special or metropolitan city are dissolved to that first-level city so
+  the naming unit remains comparable to provincial cities and counties.
+
+## GeoNames Republic of Korea alternate names
+
+- Provider: GeoNames geographical database
+- URL: https://download.geonames.org/export/dump/alternatenames/KR.zip
+- Downloaded: 2026-07-15 (Asia/Seoul)
+- Original archive: `geonames-alternatenames-KR.zip`
+- SHA-256: `b28f39c5fc501ddca044877c54ad77376011ce82cefb8ac8726774b1517d56c5`
+- Archive member used: `KR.txt`
+- Use: Korean display names matched to GeoNames ADM2 identifiers. Untagged
+  Hangul alternatives are accepted when no Korean-language-tagged value exists.
+- License: GeoNames data is provided under Creative Commons Attribution 4.0.

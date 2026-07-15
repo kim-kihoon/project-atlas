@@ -12,6 +12,63 @@
     "country_filter_value": "KOR",
     "source_year": 2022
   },
+  "city_source": {
+    "path": "data/source/KR.zip",
+    "member": "KR.txt",
+    "provider": "GeoNames",
+    "country_code": "KR",
+    "minimum_population": 500000,
+    "capital_geoname_id": "1835848",
+    "canonical_aliases": {"kimhae": "gimhae"},
+    "names_ko": {
+      "seoul":"서울","busan":"부산","incheon":"인천","daegu":"대구",
+      "daejeon":"대전","gwangju":"광주","suwon":"수원","ulsan":"울산",
+      "yongin":"용인","goyang":"고양","changwon":"창원","seongnam":"성남",
+      "hwaseong":"화성","cheongju":"청주","bucheon":"부천","namyangju":"남양주",
+      "cheonan":"천안","jeonju":"전주","ansan":"안산","anyang":"안양",
+      "gimhae":"김해","paju":"파주","pohang":"포항"
+    }
+  },
+  "tile_naming": {
+    "boundary_path": "data/source/geoBoundaries-KOR-ADM2.geojson",
+    "boundary_provider": "geoBoundaries gbOpen",
+    "boundary_year": 2020,
+    "alternate_names_path": "data/source/geonames-alternatenames-KR.zip",
+    "alternate_names_member": "KR.txt",
+    "minimum_tile_share": 0.05,
+    "population_exception": "missing_unit_must_exceed_current_holder_and_not_eliminate_it",
+    "aggregate_admin1_codes": [
+      "KR-11", "KR-26", "KR-27", "KR-28", "KR-29", "KR-30", "KR-31", "KR-50"
+    ],
+    "geonames_admin1_codes": {
+      "01": "KR-49",
+      "03": "KR-45",
+      "05": "KR-43",
+      "06": "KR-42",
+      "10": "KR-26",
+      "11": "KR-11",
+      "12": "KR-28",
+      "13": "KR-41",
+      "14": "KR-47",
+      "15": "KR-27",
+      "16": "KR-46",
+      "17": "KR-44",
+      "18": "KR-29",
+      "19": "KR-30",
+      "20": "KR-48",
+      "21": "KR-31",
+      "22": "KR-50"
+    }
+  },
+  "city_classification": {
+    "city_population_min": 500000,
+    "metropolis_population_min": 1000000,
+    "colors": {
+      "capital": "#f4c542",
+      "metropolis": "#d73027",
+      "city": "#3182bd"
+    }
+  },
   "grid": {
     "orientation": "pointy_top",
     "target_area_km2": 605.21,

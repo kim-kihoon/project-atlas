@@ -220,6 +220,18 @@ city classification only when trustworthy population data exists:
 - metropolis: 1,000,000 or more, 3 district slots
 - capital status is separate and adds no slot
 
+Administrative ownership and city type are independent dimensions. A city tile
+inside a province keeps that province's `admin1_code`; for example, Yongin is a
+Gyeonggi-owned metropolis tile. City/capital status may override fill color but
+must not create city boundary lines. Administrative borders follow only shared
+edges where `admin1_code` differs.
+
+Tile display names are also independent. Default to the city/county with the
+largest tile overlap. A missing unit with known population may receive one
+representative tile only above the configured overlap floor and under the population
+comparison rules, without eliminating the current unit's last tile. Naming
+never changes administrative ownership, city class, fill class, or borders.
+
 ## QGIS Project and Outputs
 
 - Save `Atlas_Korea.qgz` with relative data paths only.
