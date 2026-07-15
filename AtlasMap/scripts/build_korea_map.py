@@ -672,7 +672,7 @@ def allocate_tile_names(
     for code in sorted(
         priority_codes,
         key=lambda value: (
-            len(city_options[value]), -population_by_code[value], value,
+            -population_by_code[value], len(city_options[value]), value,
         ),
     ):
         # A dense metro area can contain more qualifying real cities than the
@@ -1772,6 +1772,11 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 f"{len(unrepresented_city_units)}",
             ]
         )
+        for code in unrepresented_city_units:
+            city = city_by_unit_code[code]
+            report_lines.append(
+                f"  - `{code}`: {city['name_en']} ({int(city['population']):,})"
+            )
         for iso3 in sorted(national_population_totals):
             report_lines.append(
                 f"- {iso3}: tile sum {country_population_sums[iso3]:,}; "

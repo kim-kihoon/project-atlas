@@ -264,6 +264,9 @@ largest-overlap representative; redistribute its other tiles to currently
 unrepresented same-owner units in population order, each choosing its
 largest-overlap vacancy. Any positive overlap is eligible. Reserve compatible
 representative tiles for as many qualifying real cities as the grid permits.
+Resolve competition for compatible tiles in descending real-city population
+order without allowing a smaller city to evict a matched larger city. This
+priority never relaxes spatial overlap or Admin-1 ownership constraints.
 Derive initial city/metropolis fill from the anchored real-city population;
 ordinary dense tiles remain `admin` and expose promotion eligibility separately.
 Capital status follows the final name and overrides fill color only.

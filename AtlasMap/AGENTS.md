@@ -28,6 +28,11 @@ overlapping same-owner unit. A duplicated unit keeps its largest-overlap
 representative; redistribute its other tiles to unrepresented compatible units
 in population order. Any positive overlap is eligible. Reserve distinct
 compatible representatives for qualifying real cities when the grid permits.
+When real cities compete for limited compatible tiles, process them in
+descending actual-population order; a smaller city must not displace an already
+matched larger city. Spatial overlap and Admin-1 ownership remain mandatory,
+so an isolated smaller city may keep its local tile while a dense metropolitan
+city has no distinct hex at the current resolution.
 Only those real-city anchor tiles receive an initial `city_class`: 100,000+
 means `city` and 1,000,000+ means `metropolis`. An ordinary tile over 100,000
 remains `admin` but sets `city_upgrade_eligible` for player-selected promotion.

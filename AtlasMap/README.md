@@ -31,6 +31,10 @@ other tiles become vacancies. Unrepresented units then take compatible
 vacancies in population order, choosing their largest-overlap vacancy. There is
 no minimum overlap threshold. Display-name population is internal naming
 evidence only and is not copied into the game tile.
+Qualifying real cities reserve compatible representative tiles in descending
+actual-population order. Smaller cities cannot displace already matched larger
+cities, although spatial overlap and administrative ownership can leave a dense
+city without a distinct hex while an isolated smaller city keeps its local hex.
 When a capital naming unit occupies multiple tiles, all tiles carrying that
 capital name use the capital fill rather than only one representative tile.
 

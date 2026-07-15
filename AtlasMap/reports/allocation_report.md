@@ -1,6 +1,6 @@
 # Atlas Korean Peninsula tile allocation report
 
-Generated: 2026-07-15T11:48:08.592704+00:00
+Generated: 2026-07-15T12:07:49.608360+00:00
 
 - Orientation: `pointy_top`
 - Final tiles: **364**
@@ -61,7 +61,7 @@ Generated: 2026-07-15T11:48:08.592704+00:00
 - Candidate threshold: any positive overlap; no minimum share
 - Naming units: 337
 - Uniquely represented units: 275
-- Positive-overlap representatives below the legacy 5% reporting threshold: 25
+- Positive-overlap representatives below the legacy 5% reporting threshold: 22
 - Dominant-overlap fill tiles: 71
 - Population-redistribution fill tiles: 17
 - Same-owner nearest-boundary fallbacks: 1
@@ -73,10 +73,20 @@ WorldPop distributes the residual population; UN WPP fixes the exact national to
 Non-city tiles over 100,000 residents are upgrade-eligible, not automatically cities.
 
 - Capital tiles: 5
-- Metropolis tiles: 8
-- City tiles: 76
-- Player city-upgrade eligible tiles: 66
+- Metropolis tiles: 10
+- City tiles: 74
+- Player city-upgrade eligible tiles: 61
 - Qualifying real cities without a distinct tile at this resolution: 10
+  - `KP-06:songrim-city`: Songnim Ni (152,425)
+  - `KR-41:ansan`: Ansan (623,256)
+  - `KR-41:anyang`: Anyang (595,644)
+  - `KR-41:bucheon`: Bucheon (850,731)
+  - `KR-41:guri`: Guri (211,720)
+  - `KR-41:gwangmyeong`: Gwangmyeong (357,545)
+  - `KR-41:osan`: Osan (238,788)
+  - `KR-41:pyeongtaek`: Pyeongtaek (364,694)
+  - `KR-41:uiwang`: Uiwang (154,923)
+  - `KR-46:mokpo`: Mokpo (268,402)
 - KOR: tile sum 51,600,388; UN WPP target 51,600,388; raw WorldPop weight sum 7,507,167.09
 - PRK: tile sum 26,633,691; UN WPP target 26,633,691; raw WorldPop weight sum 15,193,533.37
 

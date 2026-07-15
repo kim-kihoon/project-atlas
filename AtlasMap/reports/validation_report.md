@@ -1,6 +1,6 @@
 # Atlas Korean Peninsula validation report
 
-Generated: 2026-07-15T11:48:11.216818+00:00
+Generated: 2026-07-15T12:07:52.233165+00:00
 
 Overall result: **PASS**
 
