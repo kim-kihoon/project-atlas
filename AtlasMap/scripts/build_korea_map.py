@@ -785,6 +785,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         selected_indexes = sorted(assignments, key=lambda i: candidates[i]["tile_id"])
         selected_ids = {candidates[i]["tile_id"] for i in selected_indexes}
         neighbors = {tile_id: [] for tile_id in selected_ids}
+        admin_border_records = []
         for position, first_index in enumerate(selected_indexes):
             first = candidates[first_index]
             for second_index in selected_indexes[position + 1 :]:
@@ -797,6 +798,15 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 if shared_geometry.length() >= side * 0.5:
                     neighbors[first["tile_id"]].append(second["tile_id"])
                     neighbors[second["tile_id"]].append(first["tile_id"])
+                    first_admin = assignments[first_index]
+                    second_admin = assignments[second_index]
+                    if first_admin != second_admin:
+                        admin_border_records.append(
+                            (
+                                shared_geometry, first["tile_id"], second["tile_id"],
+                                first_admin, second_admin,
+                            )
+                        )
         for value in neighbors.values():
             value.sort()
 
@@ -1048,24 +1058,16 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
 
         border_fields = QgsFields()
         for name, kind in (
-            ("admin1_code", QVariant.String), ("admin1_name_ko", QVariant.String),
-            ("tile_count", QVariant.Int),
+            ("tile_id_a", QVariant.String), ("tile_id_b", QVariant.String),
+            ("admin_a", QVariant.String), ("admin_b", QVariant.String),
         ):
             border_fields.append(QgsField(name, kind))
-        border_layer = memory_layer(
-            "MultiPolygon", target_crs, "admin1_tile_borders", border_fields
-        )
+        border_layer = memory_layer("LineString", target_crs, "admin1_tile_borders", border_fields)
         border_features = []
-        for admin in admins:
-            code = admin["code"]
-            tile_geometries = [
-                candidates[index]["geometry"] for index in selected_indexes
-                if assignments[index] == code
-            ]
-            region_geometry = QgsGeometry.unaryUnion(tile_geometries)
+        for geometry, tile_a, tile_b, admin_a, admin_b in admin_border_records:
             feature = QgsFeature(border_layer.fields())
-            feature.setGeometry(region_geometry)
-            feature.setAttributes([code, admin["name_ko"], len(tile_geometries)])
+            feature.setGeometry(geometry)
+            feature.setAttributes([tile_a, tile_b, admin_a, admin_b])
             border_features.append(feature)
         border_layer.dataProvider().addFeatures(border_features)
 
@@ -1168,10 +1170,10 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         )
         persisted_borders.setRenderer(
             QgsSingleSymbolRenderer(
-                QgsFillSymbol.createSimple(
+                QgsLineSymbol.createSimple(
                     {
-                        "color": "0,0,0,0", "outline_color": "#151515",
-                        "outline_width": "0.65", "joinstyle": "round",
+                        "line_color": "#151515", "line_width": "0.8",
+                        "capstyle": "round", "joinstyle": "round",
                     }
                 )
             )

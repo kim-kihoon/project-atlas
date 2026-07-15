@@ -333,20 +333,40 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             f"{gpkg}|layername=admin1_tile_borders", "admin1_tile_borders", "ogr"
         )
         border_features = list(border_layer.getFeatures()) if border_layer.isValid() else []
-        border_codes = [str(border["admin1_code"] or "") for border in border_features]
+        tile_by_id = {str(tile["tile_id"]): tile for tile in features}
+        expected_border_edges = set()
+        for tile in features:
+            tile_id = str(tile["tile_id"])
+            admin_a = str(tile["admin1_code"])
+            try:
+                neighbor_ids = json.loads(str(tile["neighbor_ids"] or "[]"))
+            except (TypeError, ValueError, json.JSONDecodeError):
+                neighbor_ids = []
+            for neighbor_id in neighbor_ids:
+                neighbor = tile_by_id.get(str(neighbor_id))
+                if neighbor is not None and admin_a != str(neighbor["admin1_code"]):
+                    expected_border_edges.add(tuple(sorted((tile_id, str(neighbor_id)))))
+        actual_border_edges = set()
         invalid_borders = []
         for border in border_features:
-            code = str(border["admin1_code"] or "")
+            tile_a = str(border["tile_id_a"] or "")
+            tile_b = str(border["tile_id_b"] or "")
+            admin_a = str(border["admin_a"] or "")
+            admin_b = str(border["admin_b"] or "")
+            edge = tuple(sorted((tile_a, tile_b)))
+            actual_border_edges.add(edge)
             if (
-                code not in targets or border.geometry().isEmpty()
-                or int(border["tile_count"] or 0) != actual.get(code, 0)
+                tile_a not in tile_by_id or tile_b not in tile_by_id
+                or admin_a not in targets or admin_b not in targets or admin_a == admin_b
+                or border.geometry().isEmpty()
             ):
-                invalid_borders.append(code)
+                invalid_borders.append(edge)
         check(
-            "Admin regions have closed owner outlines",
-            border_layer.isValid() and len(border_features) == len(targets)
-            and len(set(border_codes)) == len(targets) and not invalid_borders,
-            f"regions={len(border_features)}, invalid={invalid_borders}",
+            "Admin borders contain each differing-owner shared edge once",
+            border_layer.isValid() and actual_border_edges == expected_border_edges
+            and len(border_features) == len(actual_border_edges) and not invalid_borders,
+            f"edges={len(border_features)}, invalid={invalid_borders}, "
+            f"missing={sorted(expected_border_edges - actual_border_edges)}",
         )
         coast_layer = QgsVectorLayer(
             f"{gpkg}|layername=coastal_tile_outlines", "coastal_tile_outlines", "ogr"
