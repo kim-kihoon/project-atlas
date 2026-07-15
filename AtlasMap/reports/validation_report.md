@@ -1,6 +1,6 @@
 # Atlas Korean Peninsula validation report
 
-Generated: 2026-07-15T02:56:16.236776+00:00
+Generated: 2026-07-15T03:11:51.270420+00:00
 
 Overall result: **PASS**
 
@@ -33,7 +33,8 @@ Overall result: **PASS**
 | Unique representatives after redistribution | PASS | invalid=[], duplicates=[] |
 | City marker layer removed | PASS | layer_valid=False |
 | Global city-source and classification thresholds agree | PASS | city=100000, sources=[100000, 100000] |
-| Exactly one capital tile per country | PASS | countries={'KOR': 1, 'PRK': 1} |
+| Every country has capital tiles | PASS | countries={'KOR': 1, 'PRK': 4} |
+| Every tile named for a capital uses the capital class | PASS | invalid=[] |
 | City class follows final same-owner tile name | PASS | mismatches=[] |
 | Exactly four tile color classes | PASS | actual=['admin', 'capital', 'city', 'metropolis'] |
 | Metropolis fill darker than city fill | PASS | city=#4aa3d8, metropolis=#173f6f |

@@ -430,12 +430,22 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         )
         capital_tiles = [tile for tile in features if str(tile["map_class"] or "") == "capital"]
         capital_countries = Counter(str(tile["country_iso3"] or "") for tile in capital_tiles)
+        capital_codes = {str(tile["tile_name_code"] or "") for tile in capital_tiles}
+        noncapital_capital_duplicates = [
+            str(tile["tile_id"]) for tile in features
+            if str(tile["tile_name_code"] or "") in capital_codes
+            and str(tile["map_class"] or "") != "capital"
+        ]
         check(
-            "Exactly one capital tile per country",
+            "Every country has capital tiles",
             set(capital_countries) == country_iso3s
-            and all(count == 1 for count in capital_countries.values())
             and all(bool(tile["is_capital"]) for tile in capital_tiles),
             f"countries={dict(capital_countries)}",
+        )
+        check(
+            "Every tile named for a capital uses the capital class",
+            not noncapital_capital_duplicates,
+            f"invalid={noncapital_capital_duplicates}",
         )
         tile_city_mismatches = []
         for tile in features:

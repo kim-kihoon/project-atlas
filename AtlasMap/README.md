@@ -31,6 +31,8 @@ other tiles become vacancies. Unrepresented units then take compatible
 vacancies in population order, choosing their largest-overlap vacancy. There is
 no minimum overlap threshold. City class and
 capital color follow the final tile name, not an independently located point.
+When a capital naming unit occupies multiple tiles, all tiles carrying that
+capital name use the capital fill rather than only one representative tile.
 
 The map uses exactly four tile fill classes: ordinary administrative tile,
 light-blue city (100,000-999,999), dark-navy metropolis (1,000,000+), and

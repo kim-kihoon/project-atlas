@@ -1171,13 +1171,9 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             naming_overlap = tile_name_overlaps[index].get(naming_code, 0.0)
             city = city_by_unit_code.get(naming_code)
             city_class = city["city_class"] if city else None
-            # A capital naming unit may cover several tiles (notably Pyongyang).
-            # Only its best-overlap representative receives the capital class;
-            # duplicate tiles retain the ordinary population-derived city class.
-            is_capital = bool(
-                city and city["is_capital"]
-                and unique_unit_tiles.get(naming_code) == index
-            )
+            # Capital status follows the final tile name. If the capital naming
+            # unit owns several tiles, every one of them uses the capital class.
+            is_capital = bool(city and city["is_capital"])
             district_slots = 3 if city_class == "metropolis" else 2 if city_class == "city" else 1
             overlap = candidate["overlaps"].get(code, 0.0)
             feature = QgsFeature(tile_layer.fields())
