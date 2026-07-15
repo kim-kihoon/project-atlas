@@ -36,9 +36,10 @@ actual-population order. Smaller cities cannot displace already matched larger
 cities, although spatial overlap and administrative ownership can leave a dense
 city without a distinct hex while an isolated smaller city keeps its local hex.
 When a capital naming unit occupies multiple tiles, all tiles carrying that
-capital name retain their ordinary city/metropolis/admin fill. Their combined
-outer boundary receives one yellow capital outline; internal shared edges do
-not receive that outline.
+capital name inherit the representative capital anchor's city/metropolis fill.
+Only that representative stores the actual city population, so the national
+total is not duplicated. Their combined outer boundary receives one yellow
+capital outline; internal shared edges do not receive that outline.
 
 The map uses exactly three tile fill classes: ordinary administrative tile,
 light-blue city, and dark-navy metropolis. Capital is a separate yellow outline,

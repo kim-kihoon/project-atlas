@@ -1308,6 +1308,15 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             unique_unit_tiles[code]: city for code, city in city_by_unit_code.items()
             if code in unique_unit_tiles
         }
+        capital_map_class_by_code = {
+            code: (
+                "metropolis"
+                if int(city_by_unit_code[code]["population"])
+                >= int(city_classes["metropolis_population_min"])
+                else "city"
+            )
+            for code in capital_unit_codes if code in city_by_unit_code
+        }
 
         (tile_populations, raw_population_sums, tile_population_methods,
          tile_population_source_ids) = allocate_tile_populations(
@@ -1458,7 +1467,10 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 "city_class": city_class, "is_capital": is_capital,
                 "is_initial_city": is_initial_city,
                 "city_upgrade_eligible": city_upgrade_eligible,
-                "map_class": city_class or "admin",
+                "map_class": (
+                    capital_map_class_by_code.get(naming_code, city_class or "admin")
+                    if is_capital else city_class or "admin"
+                ),
                 "tile_name_code": naming_code,
                 "tile_name_ko": naming_unit["name_ko"],
                 "tile_name_en": naming_unit["name_en"],
@@ -1787,7 +1799,9 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             unit["population_method"] for unit in naming_units
         )
         tile_class_counts = Counter(
-            "metropolis"
+            capital_map_class_by_code[tile_name_assignments[index]]
+            if tile_name_assignments[index] in capital_map_class_by_code
+            else "metropolis"
             if index in city_anchor_by_index
             and tile_populations[index] >= int(city_classes["metropolis_population_min"])
             else "city"
@@ -1811,6 +1825,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 "", "## Initial cities and game population", "",
                 "Each real city receives one representative anchor tile with its GeoNames city population.",
                 "WorldPop distributes the residual population; UN WPP fixes the exact national total.",
+                "Every tile in a capital-name group inherits the anchor city's display class without duplicating population.",
                 "Non-city tiles over 100,000 residents are upgrade-eligible, not automatically cities.", "",
                 f"- Capital tiles outlined in yellow: "
                 f"{sum(1 for index in selected_indexes if tile_name_assignments[index] in capital_unit_codes)}",

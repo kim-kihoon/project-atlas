@@ -66,3 +66,7 @@ Render a complete dark outline for each same-owner tile group using explicit
 hex-edge topology. Same-owner shared edges cancel; different-owner and exterior
 edges remain exactly once. Do not publish a separate coastal-line layer until
 the administrative borders and tile layout are final.
+Every tile carrying the same capital name inherits the representative capital
+anchor's `map_class` for display. Keep `city_class`, `is_initial_city`, and the
+actual city population only on the representative anchor so national population
+is never duplicated.

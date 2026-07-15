@@ -271,6 +271,9 @@ Derive initial city/metropolis fill from the anchored real-city population;
 ordinary dense tiles remain `admin` and expose promotion eligibility separately.
 Capital status follows the final name but never overrides fill. Draw a yellow
 outline only on the exterior edges of the complete same-capital tile group.
+For display, every tile in that group inherits the representative capital
+anchor's city/metropolis `map_class`; do not copy its population or
+`is_initial_city` status to the other tiles.
 
 ## QGIS Project and Outputs
 

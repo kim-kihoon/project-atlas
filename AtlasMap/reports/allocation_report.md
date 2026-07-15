@@ -1,6 +1,6 @@
 # Atlas Korean Peninsula tile allocation report
 
-Generated: 2026-07-15T12:15:27.535389+00:00
+Generated: 2026-07-15T12:36:09.822184+00:00
 
 - Orientation: `pointy_top`
 - Final tiles: **364**
@@ -70,10 +70,11 @@ Generated: 2026-07-15T12:15:27.535389+00:00
 
 Each real city receives one representative anchor tile with its GeoNames city population.
 WorldPop distributes the residual population; UN WPP fixes the exact national total.
+Every tile in a capital-name group inherits the anchor city's display class without duplicating population.
 Non-city tiles over 100,000 residents are upgrade-eligible, not automatically cities.
 
 - Capital tiles outlined in yellow: 5
-- Metropolis tiles: 12
+- Metropolis tiles: 15
 - City tiles: 74
 - Player city-upgrade eligible tiles: 61
 - Qualifying real cities without a distinct tile at this resolution: 10

@@ -524,6 +524,23 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             not noncapital_capital_duplicates,
             f"invalid={noncapital_capital_duplicates}",
         )
+        capital_display_classes = {}
+        invalid_capital_anchors = []
+        for code in sorted(capital_codes):
+            anchor_classes = {
+                str(tile["city_class"] or "") for tile in features
+                if str(tile["tile_name_code"] or "") == code
+                and bool(tile["is_initial_city"])
+            }
+            if len(anchor_classes) != 1 or "" in anchor_classes:
+                invalid_capital_anchors.append((code, sorted(anchor_classes)))
+            else:
+                capital_display_classes[code] = next(iter(anchor_classes))
+        check(
+            "Every capital group has one inherited anchor display class",
+            not invalid_capital_anchors,
+            f"invalid={invalid_capital_anchors}",
+        )
         tile_city_mismatches = []
         for tile in features:
             tile_id = str(tile["tile_id"])
@@ -538,7 +555,11 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
                 not is_initial_city and not bool(tile["is_capital"])
                 and population >= city_min
             )
-            expected_map_class = expected_city_class or "admin"
+            expected_map_class = (
+                capital_display_classes.get(str(tile["tile_name_code"] or ""), "admin")
+                if bool(tile["is_capital"])
+                else expected_city_class or "admin"
+            )
             expected_named = bool(expected_city_class or bool(tile["is_capital"]))
             if (
                 str(tile["city_class"] or "") != expected_city_class
