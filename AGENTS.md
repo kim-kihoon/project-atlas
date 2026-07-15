@@ -236,7 +236,9 @@ final named unit; city point data is an internal matching source only.
 - Save `Atlas_Korea.qgz` with relative data paths only.
 - Use exactly four tile fill classes: normal administrative tile, city,
   metropolis, and capital. Do not use a different fill per admin-1 area;
-  distinguish admin-1 ownership with prominent shared-edge borders instead.
+  distinguish admin-1 ownership with complete closed outlines around each
+  dissolved admin-1 tile region. Coastal lines render above and mask the
+  coastal portion of those outlines.
   Keep normal tile edges, admin borders, and coastal edges visually distinct.
   A coastal line may include only a selected tile edge shared with an
   ocean-dominant unselected grid cell; never outline an entire coastal hex.

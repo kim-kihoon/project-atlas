@@ -27,6 +27,8 @@ Use exactly four tile fill classes: `admin`, `city`, `metropolis`, and
 admin-1 ownership legible through the `admin1_tile_borders` layer, whose lines
 must be substantially stronger than ordinary tile outlines.
 
-Render admin borders above tile fills as one continuous dark line. Coastal
-lines may contain only outer tile edges adjacent to ocean-dominant unselected
-cells; never draw all six sides of a coastal tile.
+Render each dissolved admin-1 tile region as one complete closed dark outline
+above tile fills. Coastal lines render above and mask the coastal portion of
+that outline. They may contain only outer tile
+edges adjacent to ocean-dominant unselected cells; never draw all six sides of
+a coastal tile.

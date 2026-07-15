@@ -326,18 +326,20 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             f"{gpkg}|layername=admin1_tile_borders", "admin1_tile_borders", "ogr"
         )
         border_features = list(border_layer.getFeatures()) if border_layer.isValid() else []
-        invalid_borders = [
-            (str(border["tile_id_a"]), str(border["tile_id_b"]))
-            for border in border_features
-            if not str(border["admin_a"] or "")
-            or not str(border["admin_b"] or "")
-            or str(border["admin_a"]) == str(border["admin_b"])
-            or border.geometry().isEmpty()
-        ]
+        border_codes = [str(border["admin1_code"] or "") for border in border_features]
+        invalid_borders = []
+        for border in border_features:
+            code = str(border["admin1_code"] or "")
+            if (
+                code not in targets or border.geometry().isEmpty()
+                or int(border["tile_count"] or 0) != actual.get(code, 0)
+            ):
+                invalid_borders.append(code)
         check(
-            "Admin borders separate different owners",
-            border_layer.isValid() and bool(border_features) and not invalid_borders,
-            f"segments={len(border_features)}, invalid={invalid_borders}",
+            "Admin regions have closed owner outlines",
+            border_layer.isValid() and len(border_features) == len(targets)
+            and len(set(border_codes)) == len(targets) and not invalid_borders,
+            f"regions={len(border_features)}, invalid={invalid_borders}",
         )
         coast_layer = QgsVectorLayer(
             f"{gpkg}|layername=coastal_tile_outlines", "coastal_tile_outlines", "ogr"

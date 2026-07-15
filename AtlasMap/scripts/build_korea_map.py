@@ -43,6 +43,7 @@ from qgis.core import (
     QgsVectorFileWriter,
     QgsVectorLayer,
     QgsVectorLayerSimpleLabeling,
+    QgsWkbTypes,
 )
 
 
@@ -74,6 +75,30 @@ def make_hexagon(cx, cy, side, orientation):
         points.append(QgsPointXY(cx + side * math.cos(angle), cy + side * math.sin(angle)))
     points.append(points[0])
     return QgsGeometry.fromPolygonXY([points])
+
+
+def shared_edge_geometry(first, second):
+    """Normalize a shared hex edge when GEOS returns a microscopic polygon sliver."""
+    shared = first.intersection(second)
+    geometry_type = QgsWkbTypes.geometryType(shared.wkbType())
+    if geometry_type == QgsWkbTypes.LineGeometry:
+        if shared.isMultipart():
+            lines = [line for line in shared.asMultiPolyline() if line]
+            if not lines:
+                return QgsGeometry()
+            line = max(lines, key=lambda value: QgsGeometry.fromPolylineXY(value).length())
+            return QgsGeometry.fromPolylineXY(line)
+        return shared
+    if geometry_type == QgsWkbTypes.PolygonGeometry:
+        polygons = shared.asMultiPolygon() if shared.isMultipart() else [shared.asPolygon()]
+        segments = []
+        for polygon in polygons:
+            for ring in polygon:
+                for index in range(len(ring) - 1):
+                    segment = QgsGeometry.fromPolylineXY([ring[index], ring[index + 1]])
+                    segments.append(segment)
+        return max(segments, key=lambda value: value.length()) if segments else QgsGeometry()
+    return QgsGeometry()
 
 
 def load_city_source(root, settings):
@@ -721,27 +746,18 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         selected_indexes = sorted(assignments, key=lambda i: candidates[i]["tile_id"])
         selected_ids = {candidates[i]["tile_id"] for i in selected_indexes}
         neighbors = {tile_id: [] for tile_id in selected_ids}
-        admin_border_records = []
         for position, first_index in enumerate(selected_indexes):
             first = candidates[first_index]
             for second_index in selected_indexes[position + 1 :]:
                 second = candidates[second_index]
                 if not first["geometry"].boundingBox().intersects(second["geometry"].boundingBox()):
                     continue
-                # Adjacent regular grid cells intersect in a line; polygon
-                # intersection therefore gives the shared edge directly.
-                shared = first["geometry"].intersection(second["geometry"]).length()
-                if shared >= side * 0.5:
+                # Normalize the GEOS intersection because floating-point noise
+                # can turn a shared edge into a microscopic polygon sliver.
+                shared_geometry = shared_edge_geometry(first["geometry"], second["geometry"])
+                if shared_geometry.length() >= side * 0.5:
                     neighbors[first["tile_id"]].append(second["tile_id"])
                     neighbors[second["tile_id"]].append(first["tile_id"])
-                    if assignments[first_index] != assignments[second_index]:
-                        admin_border_records.append(
-                            (
-                                first["geometry"].intersection(second["geometry"]),
-                                first["tile_id"], second["tile_id"],
-                                assignments[first_index], assignments[second_index],
-                            )
-                        )
         for value in neighbors.values():
             value.sort()
 
@@ -753,7 +769,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                     continue
                 if not selected["geometry"].boundingBox().intersects(other["geometry"].boundingBox()):
                     continue
-                shared_geometry = selected["geometry"].intersection(other["geometry"])
+                shared_geometry = shared_edge_geometry(selected["geometry"], other["geometry"])
                 if shared_geometry.length() >= side * 0.5:
                     coastal_edge_records.append(
                         (shared_geometry, selected["tile_id"], other["tile_id"])
@@ -977,16 +993,24 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
 
         border_fields = QgsFields()
         for name, kind in (
-            ("tile_id_a", QVariant.String), ("tile_id_b", QVariant.String),
-            ("admin_a", QVariant.String), ("admin_b", QVariant.String),
+            ("admin1_code", QVariant.String), ("admin1_name_ko", QVariant.String),
+            ("tile_count", QVariant.Int),
         ):
             border_fields.append(QgsField(name, kind))
-        border_layer = memory_layer("LineString", target_crs, "admin1_tile_borders", border_fields)
+        border_layer = memory_layer(
+            "MultiPolygon", target_crs, "admin1_tile_borders", border_fields
+        )
         border_features = []
-        for geometry, tile_a, tile_b, admin_a, admin_b in admin_border_records:
+        for admin in admins:
+            code = admin["code"]
+            tile_geometries = [
+                candidates[index]["geometry"] for index in selected_indexes
+                if assignments[index] == code
+            ]
+            region_geometry = QgsGeometry.unaryUnion(tile_geometries)
             feature = QgsFeature(border_layer.fields())
-            feature.setGeometry(geometry)
-            feature.setAttributes([tile_a, tile_b, admin_a, admin_b])
+            feature.setGeometry(region_geometry)
+            feature.setAttributes([code, admin["name_ko"], len(tile_geometries)])
             border_features.append(feature)
         border_layer.dataProvider().addFeatures(border_features)
 
@@ -1089,10 +1113,10 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         )
         persisted_borders.setRenderer(
             QgsSingleSymbolRenderer(
-                QgsLineSymbol.createSimple(
+                QgsFillSymbol.createSimple(
                     {
-                        "line_color": "#151515", "line_width": "1.0",
-                        "capstyle": "round", "joinstyle": "round",
+                        "color": "0,0,0,0", "outline_color": "#151515",
+                        "outline_width": "0.65", "joinstyle": "round",
                     }
                 )
             )
@@ -1100,7 +1124,10 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         persisted_coast.setRenderer(
             QgsSingleSymbolRenderer(
                 QgsLineSymbol.createSimple(
-                    {"line_color": "#1677b8", "line_width": "0.7", "line_style": "dash"}
+                    {
+                        "line_color": "#1677b8", "line_width": "1.0",
+                        "line_style": "solid", "capstyle": "round", "joinstyle": "round",
+                    }
                 )
             )
         )
@@ -1127,8 +1154,8 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         project.addMapLayer(persisted_borders, False)
         project.addMapLayer(persisted_coast, False)
         game_group.addLayer(persisted_admin_labels)
-        game_group.addLayer(persisted_borders)
         game_group.addLayer(persisted_coast)
+        game_group.addLayer(persisted_borders)
         game_group.addLayer(persisted_tiles)
         project.addMapLayer(persisted_admin, False)
         project.addMapLayer(persisted_candidates, False)
@@ -1142,7 +1169,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             raise QgsProcessingException(f"Failed to write QGIS project: {project_path}")
 
         render_preview(
-            [persisted_admin_labels, persisted_borders, persisted_coast, persisted_tiles],
+            [persisted_admin_labels, persisted_coast, persisted_borders, persisted_tiles],
             preview_path,
         )
 

@@ -1,6 +1,6 @@
 # Atlas Korea tile allocation report
 
-Generated: 2026-07-15T00:35:23.238117+00:00
+Generated: 2026-07-15T00:59:52.083184+00:00
 
 - Orientation: `pointy_top`
 - Final tiles: **160**
