@@ -17,11 +17,12 @@ containing Yongin remains owned by Gyeonggi (`admin1_code=KR-41`) while its
 population-based `city_class` can be `metropolis`. City status changes fill
 color, never administrative borders.
 
-Tile display names must belong to the tile's administrative owner. Within each
-admin-1 area, cities and counties occupying at least 5% of a hex enter a global
-first-pass matching that gives each unit at most one representative tile, with
-known population as the priority and overlap as the deterministic preference.
-Remaining tiles use their largest-overlap same-owner unit. City class and
+Tile display names must belong to the tile's administrative owner. Every tile
+first goes to the highest-population same-owner city or county that overlaps it
+at all. A duplicated unit keeps the tile where it occupies the most area; its
+other tiles become vacancies. Unrepresented units then take compatible
+vacancies in population order, choosing their largest-overlap vacancy. There is
+no minimum overlap threshold. City class and
 capital color follow the final tile name, not an independently located point.
 
 The map uses exactly four tile fill classes: ordinary administrative tile,

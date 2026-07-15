@@ -16,9 +16,10 @@ must never create city boundary lines; only differing admin ownership creates
 administrative borders.
 
 Every tile display name must belong to the tile's `admin1_code`; this is a hard
-validation constraint. First match eligible same-owner cities/counties to at
-most one representative tile with population priority and overlap preference,
-then fill remaining tiles by largest same-owner overlap. Derive `city_class`
+validation constraint. Assign each tile first to its highest-population
+overlapping same-owner unit. A duplicated unit keeps its largest-overlap
+representative; redistribute its other tiles to unrepresented compatible units
+in population order. Any positive overlap is eligible. Derive `city_class`
 and capital color from the final named unit. Do not publish or display city
 marker points; place data remains an internal classification source.
 

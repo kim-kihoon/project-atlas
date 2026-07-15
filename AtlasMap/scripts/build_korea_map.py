@@ -294,9 +294,10 @@ def build_naming_units(root, settings, target_crs, context, admin_geometries, ci
 
 
 def allocate_tile_names(
-    candidates, selected_indexes, admin_assignments, units, minimum_share, feedback
+    candidates, selected_indexes, admin_assignments, units, minimum_share,
+    priority_units, feedback,
 ):
-    """Match first representatives globally, then fill within each tile owner."""
+    """Assign by population, keep one representative, then redistribute duplicates."""
     unit_by_code = {unit["unit_code"]: unit for unit in units}
     overlaps = {}
     nearest_fallbacks = set()
@@ -330,63 +331,100 @@ def allocate_tile_names(
             nearest_fallbacks.add(index)
         overlaps[index] = scores
 
-    eligible_tiles = {}
-    for unit in units:
-        code = unit["unit_code"]
-        options = []
-        for index in selected_indexes:
-            area = overlaps[index].get(code, 0.0)
-            if area / candidates[index]["geometry"].area() >= minimum_share:
-                options.append(index)
-        eligible_tiles[code] = sorted(
-            options,
-            key=lambda index: (-overlaps[index][code], candidates[index]["tile_id"]),
+    assignments = {}
+    methods = {}
+    rescue_assignments = set()
+    population_by_code = {
+        unit["unit_code"]: int(
+            priority_units.get(unit["unit_code"], {}).get(
+                "population", unit.get("population") or 0
+            )
         )
-
-    # Maximum-cardinality bipartite matching. Processing high-population units
-    # first preserves them when there are fewer usable tiles than units, while
-    # augmenting paths avoid wasting a tile that can represent another unit.
-    tile_to_unit = {}
-    unit_to_tile = {}
-
-    def assign_unit(code, seen_tiles, seen_units):
-        if code in seen_units:
-            return False
-        seen_units.add(code)
-        for index in eligible_tiles[code]:
-            if index in seen_tiles:
-                continue
-            seen_tiles.add(index)
-            incumbent = tile_to_unit.get(index)
-            if incumbent is None or assign_unit(incumbent, seen_tiles, seen_units):
-                tile_to_unit[index] = code
-                unit_to_tile[code] = index
-                if incumbent is not None and unit_to_tile.get(incumbent) == index:
-                    del unit_to_tile[incumbent]
-                return True
-        return False
-
-    priority_units = sorted(
-        units,
-        key=lambda unit: (
-            0 if unit["population_known"] else 1,
-            -unit["population"], unit["unit_code"],
-        ),
-    )
-    for unit in priority_units:
-        assign_unit(unit["unit_code"], set(), set())
-
-    assignments = dict(tile_to_unit)
-    methods = {index: "unique_representation" for index in assignments}
+        for unit in units
+    }
+    # Pass 1: every tile goes to the highest-population same-owner unit that
+    # overlaps it at all. Population ties use overlap, then stable unit code.
     for index in selected_indexes:
-        if index in assignments:
+        scores = overlaps[index]
+        assignments[index] = sorted(
+            scores,
+            key=lambda code: (
+                -population_by_code.get(code, 0), -scores[code], code,
+            ),
+        )[0]
+        methods[index] = "population_first"
+
+    counts = Counter(assignments.values())
+    # Pass 2: duplicated units keep the tile where they occupy the most area.
+    # Their other tiles become vacancies for units with no representative.
+    vacant = []
+    for code in sorted(counts):
+        indexes = [index for index in selected_indexes if assignments[index] == code]
+        representative = sorted(
+            indexes,
+            key=lambda index: (-overlaps[index].get(code, 0.0), candidates[index]["tile_id"]),
+        )[0]
+        for index in indexes:
+            if index != representative:
+                vacant.append(index)
+                counts[code] -= 1
+
+    # Pass 3: process unrepresented units by population. Each receives its
+    # largest-overlap compatible vacancy. Unused vacancies return to their
+    # largest-overlap same-owner unit, even if that creates a duplicate.
+    missing_units = sorted(
+        [unit for unit in units if counts.get(unit["unit_code"], 0) == 0],
+        key=lambda unit: (-population_by_code[unit["unit_code"]], unit["unit_code"]),
+    )
+    available = set(vacant)
+    for unit in missing_units:
+        code = unit["unit_code"]
+        options = [
+            index for index in available
+            if admin_assignments[index] == unit["admin1_code"]
+            and overlaps[index].get(code, 0.0) > 0.0
+        ]
+        if not options:
             continue
+        index = sorted(
+            options,
+            key=lambda value: (
+                -overlaps[value][code], candidates[value]["tile_id"],
+            ),
+        )[0]
+        assignments[index] = code
+        counts[code] += 1
+        available.remove(index)
+
+    for index in sorted(available, key=lambda value: candidates[value]["tile_id"]):
         scores = overlaps[index]
         assignments[index] = sorted(scores, key=lambda code: (-scores[code], code))[0]
-        methods[index] = (
-            "owner_nearest_fallback" if index in nearest_fallbacks else "dominant_overlap_fill"
-        )
+        counts[assignments[index]] += 1
 
+    unit_to_tile = {}
+    for code in sorted(counts):
+        indexes = [index for index in selected_indexes if assignments[index] == code]
+        if not indexes:
+            continue
+        representative = sorted(
+            indexes,
+            key=lambda index: (-overlaps[index].get(code, 0.0), candidates[index]["tile_id"]),
+        )[0]
+        unit_to_tile[code] = representative
+        for index in indexes:
+            dominant_code = sorted(
+                overlaps[index], key=lambda value: (-overlaps[index][value], value)
+            )[0]
+            methods[index] = (
+                "owner_nearest_fallback" if index in nearest_fallbacks
+                else "unique_representation" if index == representative
+                else "dominant_overlap_fill" if assignments[index] == dominant_code
+                else "population_redistribution_fill"
+            )
+        share = overlaps[representative].get(code, 0.0) / candidates[representative]["geometry"].area()
+        if share + 1e-12 < minimum_share:
+            methods[representative] = "positive_overlap_representation"
+            rescue_assignments.add(representative)
     mismatched = [
         candidates[index]["tile_id"] for index, code in assignments.items()
         if unit_by_code[code]["admin1_code"] != admin_assignments[index]
@@ -396,6 +434,7 @@ def allocate_tile_names(
     feedback.pushInfo(
         f"Named {len(selected_indexes)} tiles from {len(units)} units; "
         f"represented {len(unit_to_tile)} unique units; "
+        f"used {len(rescue_assignments)} positive-overlap representatives; "
         f"used {len(nearest_fallbacks)} same-owner nearest-boundary fallbacks"
     )
     return assignments, overlaps, methods, unit_to_tile
@@ -779,16 +818,32 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         naming_units = build_naming_units(
             root, settings, target_crs, context, admin_geometries, city_records
         )
+        city_classes = settings["city_classification"]
+        priority_units = {}
+        for city in city_records:
+            admin1_code = settings["tile_naming"]["geonames_admin1_codes"].get(
+                city["admin1_source_code"]
+            )
+            if not admin1_code:
+                continue
+            unit_code = f"{admin1_code}:{city['canonical']}"
+            is_capital = city["city_id"] == settings["city_source"]["capital_geoname_id"]
+            tier = (
+                4 if is_capital
+                else 3 if city["population"] >= int(city_classes["metropolis_population_min"])
+                else 2
+            )
+            priority_units[unit_code] = {"tier": tier, "population": city["population"]}
         tile_name_assignments, tile_name_overlaps, tile_name_methods, unique_unit_tiles = allocate_tile_names(
             candidates, selected_indexes, assignments, naming_units,
-            float(settings["tile_naming"]["minimum_tile_share"]), feedback,
+            float(settings["tile_naming"]["minimum_tile_share"]),
+            priority_units, feedback,
         )
         naming_unit_by_code = {unit["unit_code"]: unit for unit in naming_units}
 
         city_crs = QgsCoordinateReferenceSystem("EPSG:4326")
         city_transform = QgsCoordinateTransform(city_crs, target_crs, context.transformContext())
         city_by_unit_code = {}
-        city_classes = settings["city_classification"]
         for city in city_records:
             point = city_transform.transform(QgsPointXY(city["longitude"], city["latitude"]))
             geometry = QgsGeometry.fromPointXY(point)
@@ -1207,14 +1262,18 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         report_lines.extend(
             [
                 "- Hard constraint: tile name must belong to the tile's assigned admin-1 owner",
-                "- First pass: one representative tile per city/county through population-priority matching",
-                f"- Minimum overlap share for first-pass matching: "
-                f"{float(settings['tile_naming']['minimum_tile_share']):.0%}",
-                "- Second pass: remaining tiles use the largest-overlap city/county within the same owner",
+                "- First pass: every tile goes to its highest-population overlapping same-owner unit",
+                "- Duplicate pass: each unit keeps its largest-overlap representative tile",
+                "- Redistribution: unrepresented units take compatible vacancies in population order",
+                "- Candidate threshold: any positive overlap; no minimum share",
                 f"- Naming units: {len(naming_units)}",
                 f"- Uniquely represented units: {len(unique_unit_tiles)}",
+                f"- Positive-overlap representatives below the legacy 5% reporting threshold: "
+                f"{sum(1 for method in tile_name_methods.values() if method == 'positive_overlap_representation')}",
                 f"- Dominant-overlap fill tiles: "
                 f"{sum(1 for method in tile_name_methods.values() if method == 'dominant_overlap_fill')}",
+                f"- Population-redistribution fill tiles: "
+                f"{sum(1 for method in tile_name_methods.values() if method == 'population_redistribution_fill')}",
                 f"- Same-owner nearest-boundary fallbacks: "
                 f"{sum(1 for method in tile_name_methods.values() if method == 'owner_nearest_fallback')}",
             ]

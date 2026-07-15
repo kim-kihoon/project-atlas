@@ -200,7 +200,9 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         ] if not missing_naming_fields else ids
         check("Every tile has one display name", not blank_names, f"blank={blank_names}")
         allowed_naming_methods = {
-            "unique_representation", "dominant_overlap_fill", "owner_nearest_fallback"
+            "unique_representation", "positive_overlap_representation",
+            "dominant_overlap_fill", "population_redistribution_fill",
+            "owner_nearest_fallback",
         }
         invalid_naming_methods = [
             (str(feature["tile_id"]), str(feature["tile_name_method"] or ""))
@@ -252,7 +254,8 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         representation_codes = []
         minimum_share = float(settings["tile_naming"]["minimum_tile_share"])
         for tile in features:
-            if str(tile["tile_name_method"] or "") != "unique_representation":
+            method = str(tile["tile_name_method"] or "")
+            if method not in {"unique_representation", "positive_overlap_representation"}:
                 continue
             code = str(tile["tile_name_code"] or "")
             representation_codes.append(code)
@@ -260,14 +263,18 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
                 float(tile["tile_name_overlap_km2"] or 0.0)
                 / float(tile["area_km2"] or 1.0)
             )
-            if code not in naming_by_code or overlap_share + 1e-9 < minimum_share:
+            normal_valid = method == "unique_representation" and overlap_share + 1e-9 >= minimum_share
+            rescue_valid = (
+                method == "positive_overlap_representation" and overlap_share > 0
+            )
+            if code not in naming_by_code or not (normal_valid or rescue_valid):
                 representation_errors.append(
                     (str(tile["tile_id"]), code, round(overlap_share, 4))
                 )
         duplicate_representations = sorted(
             code for code, count in Counter(representation_codes).items() if count > 1
         )
-        check("Unique first-pass representatives",
+        check("Unique representatives after redistribution",
               not representation_errors and not duplicate_representations,
               f"invalid={representation_errors}, duplicates={duplicate_representations}")
 

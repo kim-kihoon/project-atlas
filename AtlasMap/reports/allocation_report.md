@@ -1,6 +1,6 @@
 # Atlas Korea tile allocation report
 
-Generated: 2026-07-15T00:59:52.083184+00:00
+Generated: 2026-07-15T01:40:21.643101+00:00
 
 - Orientation: `pointy_top`
 - Final tiles: **160**
@@ -43,12 +43,15 @@ Generated: 2026-07-15T00:59:52.083184+00:00
 ## Tile naming
 
 - Hard constraint: tile name must belong to the tile's assigned admin-1 owner
-- First pass: one representative tile per city/county through population-priority matching
-- Minimum overlap share for first-pass matching: 5%
-- Second pass: remaining tiles use the largest-overlap city/county within the same owner
+- First pass: every tile goes to its highest-population overlapping same-owner unit
+- Duplicate pass: each unit keeps its largest-overlap representative tile
+- Redistribution: unrepresented units take compatible vacancies in population order
+- Candidate threshold: any positive overlap; no minimum share
 - Naming units: 161
-- Uniquely represented units: 132
-- Dominant-overlap fill tiles: 27
+- Uniquely represented units: 129
+- Positive-overlap representatives below the legacy 5% reporting threshold: 9
+- Dominant-overlap fill tiles: 22
+- Population-redistribution fill tiles: 8
 - Same-owner nearest-boundary fallbacks: 1
 
 ## Population-based city classes

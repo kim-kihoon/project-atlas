@@ -226,9 +226,12 @@ must not create city boundary lines. Administrative borders follow only shared
 edges where `admin1_code` differs.
 
 Tile display names are subordinate to administrative ownership: the named
-city/county must belong to the tile's `admin1_code`. Use a population-priority
-one-representative matching among eligible same-owner units, then fill remaining
-tiles by largest same-owner overlap. Derive capital/city fill class from the
+city/county must belong to the tile's `admin1_code`. Assign every tile first to
+the highest-population overlapping same-owner unit. A duplicated unit keeps its
+largest-overlap representative; redistribute its other tiles to currently
+unrepresented same-owner units in population order, each choosing its
+largest-overlap vacancy. Any positive overlap is eligible. Derive capital/city
+fill class from the
 final named unit; city point data is an internal matching source only.
 
 ## QGIS Project and Outputs

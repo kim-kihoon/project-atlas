@@ -1,6 +1,6 @@
 # Atlas Korea validation report
 
-Generated: 2026-07-15T00:59:53.116897+00:00
+Generated: 2026-07-15T01:40:22.694025+00:00
 
 Overall result: **PASS**
 
@@ -24,7 +24,7 @@ Overall result: **PASS**
 | Naming reference layer | PASS | units=161 |
 | Tile name belongs to admin owner | PASS | mismatches=[] |
 | Maximum-overlap default names | PASS | mismatches=[] |
-| Unique first-pass representatives | PASS | invalid=[], duplicates=[] |
+| Unique representatives after redistribution | PASS | invalid=[], duplicates=[] |
 | City marker layer removed | PASS | layer_valid=False |
 | Exactly one capital tile | PASS | tiles=1 |
 | City class follows final same-owner tile name | PASS | mismatches=[] |

@@ -37,7 +37,7 @@
     "alternate_names_member": "KR.txt",
     "minimum_tile_share": 0.05,
     "require_same_admin1_owner": true,
-    "allocation_policy": "population_priority_unique_matching_then_same_owner_dominant_overlap_fill",
+    "allocation_policy": "population_first_keep_best_representative_then_redistribute_duplicates",
     "aggregate_admin1_codes": [
       "KR-11", "KR-26", "KR-27", "KR-28", "KR-29", "KR-30", "KR-31", "KR-50"
     ],
