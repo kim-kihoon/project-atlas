@@ -1,6 +1,6 @@
 # Atlas Korea tile allocation report
 
-Generated: 2026-07-15T00:29:02.545705+00:00
+Generated: 2026-07-15T00:35:23.238117+00:00
 
 - Orientation: `pointy_top`
 - Final tiles: **160**
@@ -53,12 +53,13 @@ Generated: 2026-07-15T00:29:02.545705+00:00
 
 ## Population-based city classes
 
-City class changes tile fill only; administrative ownership and borders remain separate.
+City class changes tile fill only; no city-marker layer is published.
 
-- Capital markers: 1
-- Metropolis markers (1,000,000+): 11
-- City markers (500,000-999,999): 12
-- Markers linked to a same-name tile: 19/23
+- Qualifying metropolis source records: 11
+- Qualifying city source records: 12
+- Capital tiles: 1
+- Metropolis tiles: 10
+- City tiles: 10
 
 ## Boundary tiles
 

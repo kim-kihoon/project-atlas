@@ -272,56 +272,32 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
               f"invalid={representation_errors}, duplicates={duplicate_representations}")
 
         city_layer = QgsVectorLayer(f"{gpkg}|layername=city_markers", "city_markers", "ogr")
-        city_features = list(city_layer.getFeatures()) if city_layer.isValid() else []
+        check("City marker layer removed", not city_layer.isValid(),
+              f"layer_valid={city_layer.isValid()}")
         city_min = int(settings["city_classification"]["city_population_min"])
         metropolis_min = int(settings["city_classification"]["metropolis_population_min"])
-        invalid_city_markers = []
-        city_by_unit = {}
-        city_link_errors = []
-        tiles_by_id = {str(tile["tile_id"]): tile for tile in features}
-        for city in city_features:
-            population = int(city["population"] or 0)
-            expected_class = "metropolis" if population >= metropolis_min else "city"
-            if population < city_min or str(city["city_class"] or "") != expected_class:
-                invalid_city_markers.append(str(city["city_id"]))
-            tile_id = str(city["tile_id"] or "")
-            city_by_unit[str(city["unit_code"] or "")] = city
-            if tile_id:
-                linked_tile = tiles_by_id.get(tile_id)
-                if (
-                    linked_tile is None
-                    or str(linked_tile["tile_name_code"] or "") != str(city["unit_code"] or "")
-                    or str(linked_tile["admin1_code"] or "") != str(city["admin1_code"] or "")
-                ):
-                    city_link_errors.append(str(city["city_id"]))
-        check("Population-based city markers", city_layer.isValid() and not invalid_city_markers,
-              f"markers={len(city_features)}, invalid={invalid_city_markers}")
-        check("City markers link to same-name owner tiles", not city_link_errors,
-              f"invalid={city_link_errors}")
         capital_tiles = [tile for tile in features if str(tile["map_class"] or "") == "capital"]
-        capital_markers = [city for city in city_features if bool(city["is_capital"])]
         check(
             "Exactly one capital tile",
-            len(capital_tiles) == 1 and len(capital_markers) == 1
-            and str(capital_tiles[0]["tile_name_code"] or "")
-            == str(capital_markers[0]["unit_code"] or ""),
-            f"tiles={len(capital_tiles)}, markers={len(capital_markers)}",
+            len(capital_tiles) == 1 and bool(capital_tiles[0]["is_capital"]),
+            f"tiles={len(capital_tiles)}",
         )
         tile_city_mismatches = []
         for tile in features:
             tile_id = str(tile["tile_id"])
-            city = city_by_unit.get(str(tile["tile_name_code"] or ""))
-            if city:
-                expected_map_class = "capital" if bool(city["is_capital"]) else str(city["city_class"])
+            map_class = str(tile["map_class"] or "")
+            population = int(tile["population"] or 0)
+            if map_class in {"city", "metropolis", "capital"}:
+                expected_city_class = "metropolis" if population >= metropolis_min else "city"
+                expected_map_class = "capital" if bool(tile["is_capital"]) else expected_city_class
                 if (
-                    str(tile["tile_name_ko"] or "") != str(city["city_name_ko"] or "")
-                    or
-                    str(tile["city_name_ko"] or "") != str(city["city_name_ko"] or "")
-                    or str(tile["city_class"] or "") != str(city["city_class"] or "")
-                    or str(tile["map_class"] or "") != expected_map_class
+                    population < city_min
+                    or str(tile["tile_name_ko"] or "") != str(tile["city_name_ko"] or "")
+                    or str(tile["city_class"] or "") != expected_city_class
+                    or map_class != expected_map_class
                 ):
                     tile_city_mismatches.append(tile_id)
-            elif str(tile["map_class"] or "") != "admin":
+            elif map_class != "admin" or bool(tile["is_capital"]):
                 tile_city_mismatches.append(tile_id)
         check("City class follows final same-owner tile name", not tile_city_mismatches,
               f"mismatches={tile_city_mismatches}")
@@ -362,6 +338,29 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             "Admin borders separate different owners",
             border_layer.isValid() and bool(border_features) and not invalid_borders,
             f"segments={len(border_features)}, invalid={invalid_borders}",
+        )
+        coast_layer = QgsVectorLayer(
+            f"{gpkg}|layername=coastal_tile_outlines", "coastal_tile_outlines", "ogr"
+        )
+        coast_features = list(coast_layer.getFeatures()) if coast_layer.isValid() else []
+        candidate_by_id = {
+            str(candidate["candidate_id"]): candidate for candidate in candidate_features
+        }
+        invalid_coast_edges = []
+        for edge in coast_features:
+            tile_id = str(edge["tile_id"] or "")
+            ocean_id = str(edge["ocean_candidate_id"] or "")
+            ocean_candidate = candidate_by_id.get(ocean_id)
+            if (
+                tile_id not in set(ids) or ocean_candidate is None
+                or str(ocean_candidate["dominant_territory"] or "") != settings["grid"]["ocean_code"]
+                or bool(ocean_candidate["selected"]) or edge.geometry().isEmpty()
+            ):
+                invalid_coast_edges.append((tile_id, ocean_id))
+        check(
+            "Coastal lines are ocean-adjacent outer edges only",
+            coast_layer.isValid() and bool(coast_features) and not invalid_coast_edges,
+            f"edges={len(coast_features)}, invalid={invalid_coast_edges}",
         )
 
         target_area = float(settings["grid"]["target_area_km2"])

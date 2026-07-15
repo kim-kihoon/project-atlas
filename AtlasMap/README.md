@@ -29,8 +29,10 @@ light-blue city (500,000-999,999), dark-navy metropolis (1,000,000+), and
 gold capital. Ordinary tiles do
 not receive separate province colors. Thick dark lines between tiles with
 different `admin1_code` values carry the administrative-boundary information.
-Those lines use a light casing plus a dark core and render above tile fills;
-thin tile outlines and dashed coastal outlines remain separate visual layers.
+Those lines render as a single dark stroke above tile fills. Dashed blue coastal
+lines include only outer tile edges adjacent to an ocean-dominant grid cell;
+they never outline a complete coastal hex. No city-marker layer is displayed or
+published.
 
 ## Quick start (macOS)
 
@@ -57,7 +59,7 @@ path of `qgis_process.exe` before running either launcher.
 
 - `Atlas_Korea.qgz`: QGIS project; open this first in QGIS.
 - `data/processed/Atlas_Korea.gpkg`: source, city/county naming reference,
-  candidates, final tiles, and city marker layers.
+  candidates, final tiles, admin borders, and ocean-adjacent coastal edges.
 - `previews/Atlas_Korea_Overview.png`: rendered overview.
 - `reports/allocation_report.md`: target and actual tile allocation.
 - `reports/validation_report.md`: release-gate validation results.

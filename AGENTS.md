@@ -181,7 +181,6 @@ Create at least these layers in `Atlas_Korea.gpkg`:
 - `admin1_source`: cleaned/reprojected 17-area reference boundaries
 - `hex_candidates`: all candidates and overlap scores
 - `korea_tiles`: all Korea-dominant final game hexagons
-- `city_markers`: an initially empty point layer with a documented schema
 
 `korea_tiles` must include at least:
 
@@ -212,8 +211,8 @@ source_year
 manual_override
 ```
 
-Keep legal administrative areas and city markers separate. Apply the global
-city classification only when trustworthy population data exists:
+Do not publish a city-marker layer. Apply the global city classification to the
+final named tile only when trustworthy population data exists:
 
 - non-city: under 500,000 population, 1 district slot
 - city: 500,000 to under 1,000,000, 2 district slots
@@ -230,7 +229,7 @@ Tile display names are subordinate to administrative ownership: the named
 city/county must belong to the tile's `admin1_code`. Use a population-priority
 one-representative matching among eligible same-owner units, then fill remaining
 tiles by largest same-owner overlap. Derive capital/city fill class from the
-final named unit; city point markers never independently assign a tile.
+final named unit; city point data is an internal matching source only.
 
 ## QGIS Project and Outputs
 
@@ -238,7 +237,9 @@ final named unit; city point markers never independently assign a tile.
 - Use exactly four tile fill classes: normal administrative tile, city,
   metropolis, and capital. Do not use a different fill per admin-1 area;
   distinguish admin-1 ownership with prominent shared-edge borders instead.
-  Keep normal tile edges, admin borders, and coastal outlines visually distinct.
+  Keep normal tile edges, admin borders, and coastal edges visually distinct.
+  A coastal line may include only a selected tile edge shared with an
+  ocean-dominant unselected grid cell; never outline an entire coastal hex.
 - Label each admin-1 area with its name and assigned tile count.
 - Show `tile_id` labels only at an appropriate zoom scale.
 - Put real source boundaries in a separate toggleable validation group so they

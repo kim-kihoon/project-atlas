@@ -19,10 +19,14 @@ Every tile display name must belong to the tile's `admin1_code`; this is a hard
 validation constraint. First match eligible same-owner cities/counties to at
 most one representative tile with population priority and overlap preference,
 then fill remaining tiles by largest same-owner overlap. Derive `city_class`
-and capital color from the final named unit. City marker points are reference
-data only and must not independently select or color a tile.
+and capital color from the final named unit. Do not publish or display city
+marker points; place data remains an internal classification source.
 
 Use exactly four tile fill classes: `admin`, `city`, `metropolis`, and
 `capital`. All ordinary administrative tiles share one fill color. Make
 admin-1 ownership legible through the `admin1_tile_borders` layer, whose lines
 must be substantially stronger than ordinary tile outlines.
+
+Render admin borders above tile fills as one continuous dark line. Coastal
+lines may contain only outer tile edges adjacent to ocean-dominant unselected
+cells; never draw all six sides of a coastal tile.

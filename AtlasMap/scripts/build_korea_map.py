@@ -26,7 +26,6 @@ from qgis.core import (
     QgsLineSymbol,
     QgsMapRendererParallelJob,
     QgsMapSettings,
-    QgsMarkerSymbol,
     QgsPalLayerSettings,
     QgsPointXY,
     QgsProcessing,
@@ -38,7 +37,6 @@ from qgis.core import (
     QgsProperty,
     QgsRectangle,
     QgsRendererCategory,
-    QgsSimpleLineSymbolLayer,
     QgsSingleSymbolRenderer,
     QgsTextBufferSettings,
     QgsTextFormat,
@@ -747,6 +745,20 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         for value in neighbors.values():
             value.sort()
 
+        coastal_edge_records = []
+        for index in selected_indexes:
+            selected = candidates[index]
+            for other_index, other in enumerate(candidates):
+                if other_index in assignments or other["dominant_territory"] != grid["ocean_code"]:
+                    continue
+                if not selected["geometry"].boundingBox().intersects(other["geometry"].boundingBox()):
+                    continue
+                shared_geometry = selected["geometry"].intersection(other["geometry"])
+                if shared_geometry.length() >= side * 0.5:
+                    coastal_edge_records.append(
+                        (shared_geometry, selected["tile_id"], other["tile_id"])
+                    )
+
         city_records = load_city_source(root, settings)
         naming_units = build_naming_units(
             root, settings, target_crs, context, admin_geometries, city_records
@@ -939,33 +951,6 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             admin_features.append(feature)
         admin_layer.dataProvider().addFeatures(admin_features)
 
-        city_fields = QgsFields()
-        for name, kind in (
-            ("city_id", QVariant.String), ("city_name_ko", QVariant.String),
-            ("city_name_en", QVariant.String), ("population", QVariant.LongLong),
-            ("city_class", QVariant.String), ("is_capital", QVariant.Bool),
-            ("tile_id", QVariant.String), ("admin1_code", QVariant.String),
-            ("unit_code", QVariant.String),
-            ("source_year", QVariant.Int), ("source_url", QVariant.String),
-        ):
-            city_fields.append(QgsField(name, kind))
-        city_layer = memory_layer("Point", target_crs, "city_markers", city_fields)
-        city_features = []
-        for city in city_records:
-            feature = QgsFeature(city_layer.fields())
-            feature.setGeometry(city["geometry"])
-            feature.setAttributes(
-                [
-                    city["city_id"], city["name_ko"], city["name_en"], city["population"],
-                    city["city_class"], city["is_capital"], city["tile_id"], city["admin1_code"],
-                    city["unit_code"],
-                    int(city["source_date"][:4]) if city["source_date"][:4].isdigit() else None,
-                    "https://www.geonames.org/export/",
-                ]
-            )
-            city_features.append(feature)
-        city_layer.dataProvider().addFeatures(city_features)
-
         naming_fields = QgsFields()
         for name, kind in (
             ("unit_code", QVariant.String), ("admin1_code", QVariant.String),
@@ -1007,23 +992,19 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
 
         coast_fields = QgsFields()
         coast_fields.append(QgsField("tile_id", QVariant.String))
+        coast_fields.append(QgsField("ocean_candidate_id", QVariant.String))
         coast_layer = memory_layer("LineString", target_crs, "coastal_tile_outlines", coast_fields)
         coast_features = []
-        for index in selected_indexes:
-            candidate = candidates[index]
-            if candidate["land_area"] / candidate["geometry"].area() >= 0.999:
-                continue
-            ring = candidate["geometry"].asPolygon()[0]
+        for geometry, tile_id, ocean_candidate_id in coastal_edge_records:
             feature = QgsFeature(coast_layer.fields())
-            feature.setGeometry(QgsGeometry.fromPolylineXY(ring))
-            feature.setAttributes([candidate["tile_id"]])
+            feature.setGeometry(geometry)
+            feature.setAttributes([tile_id, ocean_candidate_id])
             coast_features.append(feature)
         coast_layer.dataProvider().addFeatures(coast_features)
 
         write_gpkg_layer(admin_layer, gpkg_path, "admin1_source", True)
         write_gpkg_layer(candidate_layer, gpkg_path, "hex_candidates", False)
         write_gpkg_layer(tile_layer, gpkg_path, "korea_tiles", False)
-        write_gpkg_layer(city_layer, gpkg_path, "city_markers", False)
         write_gpkg_layer(naming_layer, gpkg_path, "admin2_naming_source", False)
         write_gpkg_layer(border_layer, gpkg_path, "admin1_tile_borders", False)
         write_gpkg_layer(coast_layer, gpkg_path, "coastal_tile_outlines", False)
@@ -1035,7 +1016,6 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         persisted_admin = QgsVectorLayer(f"{gpkg_path}|layername=admin1_source", "Real admin-1 reference", "ogr")
         persisted_admin_labels = QgsVectorLayer(f"{gpkg_path}|layername=admin1_source", "Admin names and tile counts", "ogr")
         persisted_candidates = QgsVectorLayer(f"{gpkg_path}|layername=hex_candidates", "Hex candidates", "ogr")
-        persisted_cities = QgsVectorLayer(f"{gpkg_path}|layername=city_markers", "City markers", "ogr")
         persisted_naming = QgsVectorLayer(
             f"{gpkg_path}|layername=admin2_naming_source", "City-county naming reference", "ogr"
         )
@@ -1043,7 +1023,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         persisted_coast = QgsVectorLayer(f"{gpkg_path}|layername=coastal_tile_outlines", "Coastal tile outlines", "ogr")
         for layer in (
             persisted_tiles, persisted_admin, persisted_admin_labels, persisted_candidates,
-            persisted_cities, persisted_naming, persisted_borders, persisted_coast,
+            persisted_naming, persisted_borders, persisted_coast,
         ):
             if not layer.isValid():
                 raise QgsProcessingException(f"Failed to reload persisted layer: {layer.name()}")
@@ -1107,21 +1087,16 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 )
             )
         )
-        border_symbol = QgsLineSymbol.createSimple(
-            {
-                "line_color": "#f7f7f7", "line_width": "1.8",
-                "capstyle": "round", "joinstyle": "round",
-            }
-        )
-        border_symbol.appendSymbolLayer(
-            QgsSimpleLineSymbolLayer.create(
-                {
-                    "line_color": "#151515", "line_width": "0.9",
-                    "capstyle": "round", "joinstyle": "round",
-                }
+        persisted_borders.setRenderer(
+            QgsSingleSymbolRenderer(
+                QgsLineSymbol.createSimple(
+                    {
+                        "line_color": "#151515", "line_width": "1.0",
+                        "capstyle": "round", "joinstyle": "round",
+                    }
+                )
             )
         )
-        persisted_borders.setRenderer(QgsSingleSymbolRenderer(border_symbol))
         persisted_coast.setRenderer(
             QgsSingleSymbolRenderer(
                 QgsLineSymbol.createSimple(
@@ -1129,32 +1104,6 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 )
             )
         )
-        persisted_cities.setRenderer(
-            QgsSingleSymbolRenderer(
-                QgsMarkerSymbol.createSimple(
-                    {"name": "circle", "color": "#ffffff", "outline_color": "#202020", "size": "2.4"}
-                )
-            )
-        )
-        city_labels = QgsPalLayerSettings()
-        city_labels.fieldName = "city_name_ko"
-        city_labels.isExpression = False
-        city_labels.scaleVisibility = True
-        city_labels.maximumScale = 900000
-        city_text = QgsTextFormat()
-        city_text.setSize(8)
-        city_text.setColor(QColor("#202020"))
-        city_buffer = QgsTextBufferSettings()
-        city_buffer.setEnabled(True)
-        city_buffer.setSize(0.7)
-        city_buffer.setColor(QColor("white"))
-        city_text.setBuffer(city_buffer)
-        city_labels.setFormat(city_text)
-        persisted_cities.setLabeling(QgsVectorLayerSimpleLabeling(city_labels))
-        # A tile has exactly one visible city/county name: tile_name_ko.
-        # City markers remain available for population classification and
-        # inspection, but their labels would create a second name on the tile.
-        persisted_cities.setLabelsEnabled(False)
         persisted_naming.setRenderer(
             QgsSingleSymbolRenderer(
                 QgsFillSymbol.createSimple(
@@ -1174,12 +1123,10 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         game_group = root_node.addGroup("Game Map")
         reference_group = root_node.addGroup("Validation Reference")
         project.addMapLayer(persisted_tiles, False)
-        project.addMapLayer(persisted_cities, False)
         project.addMapLayer(persisted_admin_labels, False)
         project.addMapLayer(persisted_borders, False)
         project.addMapLayer(persisted_coast, False)
         game_group.addLayer(persisted_admin_labels)
-        game_group.addLayer(persisted_cities)
         game_group.addLayer(persisted_borders)
         game_group.addLayer(persisted_coast)
         game_group.addLayer(persisted_tiles)
@@ -1246,15 +1193,21 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             ]
         )
         city_counts = Counter(city["city_class"] for city in city_records)
+        tile_class_counts = Counter(
+            "capital" if bool(city_by_unit_code.get(tile_name_assignments[index], {}).get("is_capital"))
+            else city_by_unit_code[tile_name_assignments[index]]["city_class"]
+            if tile_name_assignments[index] in city_by_unit_code else "admin"
+            for index in selected_indexes
+        )
         report_lines.extend(
             [
                 "", "## Population-based city classes", "",
-                "City class changes tile fill only; administrative ownership and borders remain separate.", "",
-                f"- Capital markers: {sum(1 for city in city_records if city['is_capital'])}",
-                f"- Metropolis markers (1,000,000+): {city_counts.get('metropolis', 0)}",
-                f"- City markers (500,000-999,999): {city_counts.get('city', 0)}",
-                f"- Markers linked to a same-name tile: "
-                f"{sum(1 for city in city_records if city['tile_id'])}/{len(city_records)}",
+                "City class changes tile fill only; no city-marker layer is published.", "",
+                f"- Qualifying metropolis source records: {city_counts.get('metropolis', 0)}",
+                f"- Qualifying city source records: {city_counts.get('city', 0)}",
+                f"- Capital tiles: {tile_class_counts.get('capital', 0)}",
+                f"- Metropolis tiles: {tile_class_counts.get('metropolis', 0)}",
+                f"- City tiles: {tile_class_counts.get('city', 0)}",
             ]
         )
         boundary_tiles = []
