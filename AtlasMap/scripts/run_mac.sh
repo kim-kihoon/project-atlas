@@ -6,6 +6,15 @@ ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONFIG="$ROOT/config/atlas_korea.json"
 STAGE="${1:-all}"
 
+if [[ "$STAGE" == "global-validate" ]]; then
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "Python 3 is required for the global-readiness audit." >&2
+    exit 2
+  fi
+  python3 "$ROOT/scripts/validate_global_readiness.py" --config "$CONFIG"
+  exit $?
+fi
+
 if [[ -n "${QGIS_PROCESS:-}" ]]; then
   QGIS_BIN="$QGIS_PROCESS"
 elif command -v qgis_process >/dev/null 2>&1; then
@@ -55,7 +64,7 @@ case "$STAGE" in
     run_algorithm export_for_unreal.py
     ;;
   *)
-    echo "Usage: $0 {all|build|validate|export}" >&2
+    echo "Usage: $0 {all|build|validate|global-validate|export}" >&2
     exit 2
     ;;
 esac

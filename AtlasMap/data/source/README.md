@@ -17,6 +17,24 @@
 - License: United Nations data terms apply; project-specific redistribution
   review remains deferred by the project owner.
 
+## SGIS 2025 Republic of Korea administrative boundaries
+
+- Provider: National Data Agency, SGIS administrative statistics boundaries
+- Dataset page: https://www.data.go.kr/data/15129688/fileData.do
+- Direct file: https://www.data.go.kr/cmm/cmm/fileDownload.do?atchFileId=FILE_000000003601705&fileDetailSn=1&insertDataPrcus=N
+- Downloaded: 2026-07-16 (Asia/Seoul)
+- Reference boundary: 2025 Q2; source DBF update date: 2026-01-14
+- Original archive: `sgis_2025/SGIS_Administrative_Boundaries_2025.zip`
+- Original archive size: 251,294,559 bytes
+- SHA-256: `3f517984bfdf4bbe43ee2a8849cff010d70ac5a826f880e6976b9a1f2b30611b`
+- Extracted source: `sgis_2025/admin1/bnd_sido_00_2025_2Q.*`
+- CRS and coverage: EPSG:5179, all 17 Republic of Korea first-level
+  administrative areas
+- License/terms: the portal records `이용허락범위 제한 없음` (no restriction
+  on the permitted scope of use).
+- Use: authoritative KOR national land union and KOR Admin-1 ownership. The
+  extracted source files are preserved without geometry edits.
+
 ## Natural Earth Admin 1 - States, Provinces
 
 - Source: Natural Earth, 1:10m Cultural Vectors, Admin 1
@@ -29,9 +47,9 @@
 - License/terms status: Natural Earth describes the data as public domain and
   free for any type of project. Final project-specific redistribution review is
   intentionally deferred by the project owner.
-- Selection: features where `adm0_a3 = 'KOR'`
-- Verification: the selected source contains exactly 17 features, including
-  Sejong (`KR-50`).
+- Selection/use: PRK Admin-1 ownership and the global nearby-country competitor
+  reference used for country-versus-ocean dominance. Natural Earth is no longer
+  used as the KOR Admin-1 authority.
 
 The archive and extracted original files are preserved unchanged. Generated,
 filtered, repaired, and reprojected layers belong in
@@ -148,3 +166,49 @@ filtered, repaired, and reprojected layers belong in
 - Use: country-neutral zonal-sum fallback for unresolved North Korean naming
   units, identical to the Republic of Korea workflow.
 - License: Creative Commons Attribution 4.0.
+
+## Rejected global boundary candidate: World Bank Official Boundaries v3
+
+- Provider: World Bank
+- Dataset: World Bank Official Boundaries
+- Catalog: https://datacatalog.worldbank.org/search/dataset/0038272/world-bank-official-boundaries
+- Dataset version: 3
+- Catalog modified: 2026-07-14
+- Downloaded: 2026-07-16 (Asia/Seoul)
+- License: Creative Commons Attribution 4.0
+- Directory manifest: `world_bank_official_boundaries_v3_2026_07_14/DR0095370.csv`
+- ADM0 source: `world_bank_official_boundaries_v3_2026_07_14/World Bank Official Boundaries - Admin 0.gpkg`
+  - Size: 60,002,304 bytes
+  - SHA-256: `a8f9860adbacdc21887f1e7375de9d7744a858e9771fb1a3c8179f2927b304f5`
+- ADM1 source: `world_bank_official_boundaries_v3_2026_07_14/World Bank Official Boundaries - Admin 1.gpkg`
+  - Size: 92,393,472 bytes
+  - SHA-256: `fc4690ab58df4dcb363e5c6e3edf3c856b96341eede5ecbb441156afaf10d77c`
+- ADM2 source: `world_bank_official_boundaries_v3_2026_07_14/World Bank Official Boundaries - Admin 2.gpkg`
+  - Size: 217,718,784 bytes
+  - SHA-256: `1259da4d3e6ff97d0554f3f0d151e7fcbe04fb37a235dc983ca5b32ed06daf7f`
+- Evaluation: rejected as the Atlas canonical global snapshot. The files are
+  retained unchanged as auditable source evidence and are not configured as
+  build inputs. See `reports/global_boundary_candidate_report.md`.
+
+## Global boundary screening sample: geoBoundaries commit 9469f09
+
+- Provider/product: geoBoundaries `gbOpen`
+- API: https://www.geoboundaries.org/api.html
+- Pinned release-data commit: `9469f09`
+- Downloaded: 2026-07-16 (Asia/Seoul)
+- Purpose: KOR/PRK screening before downloading and evaluating the complete
+  versioned CGAZ global ADM0/ADM1/ADM2 package.
+- Directory: `geoboundaries_9469f09_candidate/`
+- `KOR_ADM1.geojson`: 17 features, reference year 2021, SHA-256
+  `6683cd1ad991676d96493fd0aae068215426497ccf82c8b0eb5683cad341cddc`
+- `KOR_ADM2.geojson`: 228 file features, reference year 2020, SHA-256
+  `c367911b02f2cd7dcae6512087d84965131971de0c9def2fc5d0ed9a7392f2d8`
+- `PRK_ADM1.geojson`: 11 features, reference year 2018, SHA-256
+  `f9aab34ec157591f4e3c573cc13b2dc390c9274f241768c7d7d98141a944368c`
+- `PRK_ADM2.geojson`: 179 features, reference year 2019, SHA-256
+  `4265ce501c4402a8bafdc27298c8462e41ed6f3170d50624503c3770b8ce91e9`
+- Licenses: KOR ADM1 Public Domain; KOR ADM2 CC BY 3.0; PRK ADM1/ADM2
+  CC BY 3.0 IGO, as returned by the official API.
+- Screening status: not accepted. KOR ADM1 is complete and the Sangwon ADM2
+  point-on-surface falls in North Hwanghae, but the global composite, hierarchy
+  topology and metadata/file count discrepancy still require validation.

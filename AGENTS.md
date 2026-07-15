@@ -7,12 +7,21 @@ Build a reproducible QGIS pipeline for the modern nation-management 4X game
 and PRK on one common grid of complete regular hexagons. Work must be reproducible on macOS and
 Windows with QGIS LTR 3.44, PyQGIS, and `qgis_process`.
 
+Keep `AtlasMap/GLOBAL_MAP_RULES.md` as the authoritative cross-country design
+contract. Any change to ownership, naming, city, capital, population, global
+grid, or validation rules must update that document together with code and
+configuration.
+
 The project is a game-map approximation. Do not enforce a fixed national tile
 count. Assign each global-grid hex to the country or ocean occupying its largest
 area; keep KOR- and PRK-dominant hexes as their respective national tiles.
-Assign each tile only to a greatest-overlap admin area in the same country.
-National ownership may never cross or collide. Admin target counts are advisory;
-only configured minimum representation is mandatory.
+National ownership may never cross or collide and always follows greatest
+country-or-ocean overlap. Guarantee every official Admin-1 one positive-overlap
+representative tile inside the same dominant country whenever this can be done
+without removing another area's last tile. Assign all remaining tiles to their
+greatest-overlap Admin-1. When possible, choose a representative already carrying
+a naming unit from that Admin-1 so visible name and ownership coincide.
+Historical targets remain advisory.
 
 ## Workspace and Safety Rules
 
@@ -60,6 +69,7 @@ only configured minimum representation is mandatory.
 AtlasMap/
 ├── Atlas_Korea.qgz
 ├── AGENTS.md
+├── GLOBAL_MAP_RULES.md
 ├── README.md
 ├── .gitignore
 ├── .gitattributes
@@ -73,6 +83,7 @@ AtlasMap/
 ├── scripts/
 │   ├── build_korea_map.py
 │   ├── validate_korea_map.py
+│   ├── validate_global_readiness.py
 │   ├── export_for_unreal.py
 │   ├── run_mac.sh
 │   └── run_windows.ps1
@@ -81,6 +92,7 @@ AtlasMap/
 ├── exports/
 ├── previews/
 ├── reports/
+│   └── global_readiness_report.md
 └── logs/
 ```
 
@@ -165,13 +177,12 @@ produce the same geometries, assignments, and stable `tile_id` values:
 4. Select uncut candidates for the game map.
 5. Initially assign each tile to the admin area with greatest overlap.
 6. Compare Korea, nearby countries, and ocean in every candidate. Select every
-   Korea-dominant candidate, then assign it to its greatest-overlap Korean admin
-   area. If a configured required
-   admin area receives fewer than `minimum_tiles`, reassign its strongest
-   overlapping candidate as an explicit minimum-representation exception.
-7. Put difficult explicit adjustments in
-   `overrides/tile_assignment_overrides.csv`; do not hide arbitrary exceptions
-   in code.
+   Korea-dominant candidate, then reserve one positive-overlap same-country tile
+   for each official Admin-1 that would otherwise have zero representation.
+   Never remove another official area's last tile; keep every other tile with
+   its greatest-overlap owner.
+7. Keep `overrides/tile_assignment_overrides.csv` empty for ownership. Manual
+   ownership overrides are forbidden because they would violate greatest overlap.
 8. Calculate centers and adjacency, with deterministic IDs and symmetric
    neighbor relationships.
 9. Write scores, boundary-tile details, and override use to reports.
@@ -257,23 +268,32 @@ Gyeonggi-owned metropolis tile. City/capital status may override fill color but
 must not create city boundary lines. Administrative borders follow only shared
 edges where `admin1_code` differs.
 
-Tile display names are subordinate to administrative ownership: the named
-city/county must belong to the tile's `admin1_code`. Assign every tile first to
-the highest-population overlapping same-owner unit. A duplicated unit keeps its
-largest-overlap representative; redistribute its other tiles to currently
-unrepresented same-owner units in population order, each choosing its
-largest-overlap vacancy. Any positive overlap is eligible. Reserve compatible
-representative tiles for as many qualifying real cities as the grid permits.
-Resolve competition for compatible tiles in descending real-city population
-order without allowing a smaller city to evict a matched larger city. This
-priority never relaxes spatial overlap or Admin-1 ownership constraints.
+Final Admin-1 ownership is decided before display naming. Final ownership follows
+the one-tile official-area representation floor, then greatest overlap. Classify
+each naming unit under the current authoritative greatest-overlap Admin-1 and
+clip it to that Admin-1. For naming, consider only city/county units belonging
+to the tile's final Admin-1 owner. Process units globally in descending
+population order; each unit reserves its maximum-overlap still-unclaimed tile.
+After this unique-representative pass, fill remaining tiles with their
+greatest-overlap intersecting unit; break area ties by population, then stable
+unit code. Any positive overlap is eligible. A smaller unit may never evict a
+matched larger unit. This priority never relaxes spatial overlap or boundaries.
+Apply this algorithm identically to every configured country now and to every
+country added during world-map expansion; do not introduce country-specific
+naming branches or exceptions.
 Derive initial city/metropolis fill from the anchored real-city population;
 ordinary dense tiles remain `admin` and expose promotion eligibility separately.
 Capital status follows the final name but never overrides fill. Draw a yellow
-outline only on the exterior edges of the complete same-capital tile group.
-For display, every tile in that group inherits the representative capital
-anchor's city/metropolis `map_class`; do not copy its population or
-`is_initial_city` status to the other tiles.
+outline only on the exterior edges of the complete official capital Admin-1
+tile group, including tiles in that Admin-1 whose display name is not the
+capital city name. Cancel all internal edges within that Admin-1 group.
+Official capital Admin-1 areas use the same one-tile representation floor as
+all other official areas. Display naming may cross neither national nor Admin-1
+ownership boundaries.
+For display, every same-owner tile carrying the same represented city/county
+naming-unit code inherits its representative city anchor's city/metropolis `map_class`.
+This applies to ordinary cities and capitals alike. Do not copy the anchor's
+population, `city_class`, or `is_initial_city` status to the other tiles.
 
 ## QGIS Project and Outputs
 
@@ -289,7 +309,11 @@ anchor's city/metropolis `map_class`; do not copy its population or
   separate coastal-line layer until the administrative borders and tile layout
   are final.
 - Label each admin-1 area with its name and assigned tile count.
-- Show `tile_id` labels only at an appropriate zoom scale.
+- Treat label scale terminology correctly: `minimumScale` is the most zoomed-out
+  denominator and `maximumScale` is the most zoomed-in denominator. Tile names
+  must remain enabled without a zoomed-in cutoff, fit completely inside their
+  hexagons, and show `tile_id` only at an appropriate close zoom. Hide Admin-1
+  summary labels at close zoom so they cannot cover tile names.
 - Put real source boundaries in a separate toggleable validation group so they
   are not confused with the game-map boundary.
 - Export `previews/Atlas_Korea_Overview.png`.
@@ -312,8 +336,9 @@ any check fails:
 - CRS is EPSG:5179.
 - Every final tile is Korea-dominant over neighboring countries and ocean; the
   national total is derived rather than fixed.
-- Every configured admin minimum is satisfied; target counts are reported but
-  are not validation gates.
+- Every feasible official Admin-1 has at least one positive-overlap
+  representative tile inside its dominant country. Every non-representative
+  tile keeps its greatest-overlap owner; targets remain report-only.
 - Every `tile_id` is present and unique.
 - Every final geometry is valid, complete, and a regular hexagon.
 - Hex area is within the configured tolerance of 605.21 km2.

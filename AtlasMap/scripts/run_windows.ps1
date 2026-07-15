@@ -1,11 +1,20 @@
 param(
-    [ValidateSet("all", "build", "validate", "export")]
+    [ValidateSet("all", "build", "validate", "global-validate", "export")]
     [string]$Stage = "all"
 )
 
 $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $Config = Join-Path $Root "config\atlas_korea.json"
+
+if ($Stage -eq "global-validate") {
+    $Python = Get-Command python -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $Python) {
+        throw "Python 3 is required for the global-readiness audit."
+    }
+    & $Python.Source (Join-Path $Root "scripts\validate_global_readiness.py") --config $Config
+    exit $LASTEXITCODE
+}
 
 if ($env:QGIS_PROCESS) {
     $QgisProcess = $env:QGIS_PROCESS
@@ -35,7 +44,12 @@ if (-not $QgisProcess -or -not (Test-Path $QgisProcess)) {
 
 function Invoke-AtlasAlgorithm([string]$ScriptName) {
     $ScriptPath = Join-Path $Root "scripts\$ScriptName"
-    & $QgisProcess run $ScriptPath -- "CONFIG=$Config"
+    # qgis_process evaluates custom-script paths through Python. Forward
+    # slashes prevent Windows sequences such as `\s` from being parsed as
+    # invalid Python escapes.
+    $ScriptPathForQgis = $ScriptPath -replace '\\', '/'
+    $ConfigForQgis = $Config -replace '\\', '/'
+    & $QgisProcess run $ScriptPathForQgis -- "CONFIG=$ConfigForQgis"
     if ($LASTEXITCODE -ne 0) {
         throw "$ScriptName failed with exit code $LASTEXITCODE"
     }

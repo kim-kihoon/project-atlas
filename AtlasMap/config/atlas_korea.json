@@ -1,6 +1,56 @@
 {
   "schema_version": 1,
   "display_language": "en",
+  "globalization": {
+    "status": "korea_prototype_not_global_ready",
+    "rules_document": "GLOBAL_MAP_RULES.md",
+    "readiness_report": "reports/global_readiness_report.md",
+    "canonical_boundary_snapshot": {
+      "candidate_provider": "World Bank Official Boundaries",
+      "candidate_status": "rejected",
+      "candidate_version": "3",
+      "candidate_modified_date": "2026-07-14",
+      "candidate_report": "reports/global_boundary_candidate_report.md",
+      "candidate_source_directory": "data/source/world_bank_official_boundaries_v3_2026_07_14",
+      "candidate_rejection_reasons": [
+        "KOR ADM1 has 15 units instead of the current 17",
+        "KOR ADM2 contains no usable city or county units",
+        "PRK Sangwon is assigned to Pyongyang rather than post-2010 North Hwanghae"
+      ],
+      "next_candidate": {
+        "provider": "geoBoundaries gbOpen CGAZ",
+        "release": "6.0.0 / pinned releaseData commit 9469f09",
+        "status": "screening",
+        "sample_directory": "data/source/geoboundaries_9469f09_candidate",
+        "screening_report": "reports/global_boundary_candidate_report.md"
+      },
+      "provider": null,
+      "version": null,
+      "reference_year": null,
+      "license": null,
+      "sha256": null,
+      "required_levels": ["ADM0", "ADM1", "ADM2"],
+      "adm0_path": null,
+      "adm1_path": null,
+      "adm2_path": null
+    },
+    "global_grid": {
+      "crs_or_dggs": null,
+      "tile_id_scheme": null,
+      "ownership_independent_tile_ids": true,
+      "world_wrap_policy": null,
+      "polar_policy": null
+    },
+    "country_registry_path": null,
+    "require_spatial_indexes": true,
+    "require_coordinate_neighbor_lookup": true
+  },
+  "labeling": {
+    "tile_name_min_scale": 1600000,
+    "tile_id_max_scale": 100000,
+    "admin_name_min_scale": 1600000,
+    "admin_name_max_scale": 350000
+  },
   "country": {
     "iso3": "KOR",
     "name_ko": "대한민국",
@@ -12,6 +62,19 @@
     "country_filter_field": "adm0_a3",
     "country_filter_value": "KOR",
     "source_year": 2022
+  },
+  "admin1_source": {
+    "path": "data/source/sgis_2025/admin1/bnd_sido_00_2025_2Q.shp",
+    "code_field": "SIDO_CD",
+    "name_field": "SIDO_NM",
+    "source_year": 2025,
+    "code_map": {
+      "11":"KR-11", "21":"KR-26", "22":"KR-27", "23":"KR-28",
+      "24":"KR-29", "25":"KR-30", "26":"KR-31", "29":"KR-50",
+      "31":"KR-41", "32":"KR-42", "33":"KR-43", "34":"KR-44",
+      "35":"KR-45", "36":"KR-46", "37":"KR-47", "38":"KR-48",
+      "39":"KR-49"
+    }
   },
   "city_source": {
     "path": "data/source/KR.zip",
@@ -37,8 +100,9 @@
     "alternate_names_path": "data/source/geonames-alternatenames-KR.zip",
     "alternate_names_member": "KR.txt",
     "minimum_tile_share": 0.05,
-    "require_same_admin1_owner": true,
-    "allocation_policy": "population_first_keep_best_representative_then_redistribute_duplicates",
+    "require_same_country": true,
+    "require_same_admin1": true,
+    "allocation_policy": "population_descending_unique_representatives_then_greatest_overlap_fill",
     "aggregate_admin1_codes": [
       "KR-11", "KR-26", "KR-27", "KR-28", "KR-29", "KR-30", "KR-31", "KR-50"
     ],
@@ -93,6 +157,11 @@
   "additional_countries": [
     {
       "country": {"iso3":"PRK","iso2":"KP","name_ko":"조선민주주의인민공화국","name_en":"Democratic People's Republic of Korea"},
+      "admin1_source": {
+        "path":"data/source/natural_earth_admin1/ne_10m_admin_1_states_provinces.shp",
+        "filter_field":"adm0_a3","filter_value":"PRK",
+        "code_field":"iso_3166_2","name_field":"name_en","source_year":2022
+      },
       "city_source": {
         "path":"data/source/KP.zip","member":"KP.txt","provider":"GeoNames","country_code":"KP",
         "minimum_population":100000,"capital_geoname_id":"1871859","canonical_aliases":{},"names_ko":{}
@@ -100,8 +169,9 @@
       "tile_naming": {
         "boundary_path":"data/source/geoBoundaries-PRK-ADM2.geojson","boundary_provider":"geoBoundaries gbOpen",
         "boundary_year":2019,"alternate_names_path":"data/source/geonames-alternatenames-KP.zip",
-        "alternate_names_member":"KP.txt","minimum_tile_share":0.05,"require_same_admin1_owner":true,
-        "allocation_policy":"population_first_keep_best_representative_then_redistribute_duplicates",
+        "alternate_names_member":"KP.txt","minimum_tile_share":0.05,"require_same_country":true,
+        "require_same_admin1":true,
+        "allocation_policy":"population_descending_unique_representatives_then_greatest_overlap_fill",
         "aggregate_admin1_codes":["KP-01","KP-13"],
         "geonames_admin1_codes":{"01":"KP-04","03":"KP-08","06":"KP-05","07":"KP-06","09":"KP-07","11":"KP-03","12":"KP-01","13":"KP-10","15":"KP-02","17":"KP-09","18":"KP-13"}
       },
@@ -110,17 +180,17 @@
         "source_id":"10.5258/SOTON/WP00671","policy":"un_adjusted_1km_zonal_sum_for_unresolved_units_only"
       },
       "admin1": [
-        {"code":"KP-01","name_ko":"평양","name_en":"Pyongyang","target_tiles":5,"minimum_tiles":1},
-        {"code":"KP-02","name_ko":"평안남도","name_en":"South Pyongan","target_tiles":20,"minimum_tiles":1},
-        {"code":"KP-03","name_ko":"평안북도","name_en":"North Pyongan","target_tiles":20,"minimum_tiles":1},
-        {"code":"KP-04","name_ko":"자강도","name_en":"Chagang","target_tiles":27,"minimum_tiles":1},
-        {"code":"KP-05","name_ko":"황해남도","name_en":"South Hwanghae","target_tiles":14,"minimum_tiles":1},
-        {"code":"KP-06","name_ko":"황해북도","name_en":"North Hwanghae","target_tiles":13,"minimum_tiles":1},
-        {"code":"KP-07","name_ko":"강원도","name_en":"Kangwon","target_tiles":18,"minimum_tiles":1},
-        {"code":"KP-08","name_ko":"함경남도","name_en":"South Hamgyong","target_tiles":31,"minimum_tiles":1},
-        {"code":"KP-09","name_ko":"함경북도","name_en":"North Hamgyong","target_tiles":27,"minimum_tiles":1},
-        {"code":"KP-10","name_ko":"량강도","name_en":"Ryanggang","target_tiles":23,"minimum_tiles":1},
-        {"code":"KP-13","name_ko":"라선","name_en":"Rason","target_tiles":1,"minimum_tiles":1}
+        {"code":"KP-01","name_ko":"평양","name_en":"Pyongyang","target_tiles":5},
+        {"code":"KP-02","name_ko":"평안남도","name_en":"South Pyongan","target_tiles":20},
+        {"code":"KP-03","name_ko":"평안북도","name_en":"North Pyongan","target_tiles":20},
+        {"code":"KP-04","name_ko":"자강도","name_en":"Chagang","target_tiles":27},
+        {"code":"KP-05","name_ko":"황해남도","name_en":"South Hwanghae","target_tiles":14},
+        {"code":"KP-06","name_ko":"황해북도","name_en":"North Hwanghae","target_tiles":13},
+        {"code":"KP-07","name_ko":"강원도","name_en":"Kangwon","target_tiles":18},
+        {"code":"KP-08","name_ko":"함경남도","name_en":"South Hamgyong","target_tiles":31},
+        {"code":"KP-09","name_ko":"함경북도","name_en":"North Hamgyong","target_tiles":27},
+        {"code":"KP-10","name_ko":"량강도","name_en":"Ryanggang","target_tiles":23},
+        {"code":"KP-13","name_ko":"라선","name_en":"Rason","target_tiles":1}
       ]
     }
   ],
@@ -140,17 +210,30 @@
     "ocean_code": "OCEAN",
     "nearby_country_search_buffer_degrees": 3.0
   },
+  "admin_assignment": {
+    "minimum_tiles_per_admin": 1,
+    "policy": "greatest_overlap_then_same_country_minimum_representation",
+    "representative_tile_preference": "greatest_overlap"
+  },
   "validation": {
     "area_relative_tolerance": 0.0005,
     "regular_edge_relative_tolerance": 0.001,
     "overlap_area_tolerance_m2": 1.0,
     "neighbor_shared_edge_tolerance_m": 5.0,
     "coordinate_tolerance_m": 0.05,
-    "expected_country_tile_counts": {"KOR": 160},
+    "expected_represented_name_codes": [
+      "KR-11:seoul", "KR-26:busan", "KR-27:daegu"
+    ],
+    "expected_country_tile_counts": {"KOR": 161},
+    "expected_admin_area_km2_ranges": {
+      "KR-11":[590,620], "KR-26":[760,810], "KR-27":[1450,1540],
+      "KR-28":[1060,1160], "KR-29":[480,520], "KR-30":[520,560],
+      "KR-31":[1020,1110], "KR-50":[445,485]
+    },
     "expected_admin_tile_counts": {
-      "KR-11":1,"KR-26":1,"KR-27":1,"KR-28":1,"KR-29":1,
-      "KR-30":1,"KR-31":1,"KR-41":16,"KR-42":33,"KR-43":12,
-      "KR-44":11,"KR-45":15,"KR-46":16,"KR-47":30,"KR-48":16,
+      "KR-11":1,"KR-26":1,"KR-27":3,"KR-28":1,"KR-29":1,
+      "KR-30":1,"KR-31":1,"KR-41":17,"KR-42":28,"KR-43":12,
+      "KR-44":11,"KR-45":16,"KR-46":18,"KR-47":28,"KR-48":18,
       "KR-49":3,"KR-50":1
     }
   },
@@ -164,22 +247,22 @@
     "csv": "exports/Atlas_Korea_Tiles.csv"
   },
   "admin1": [
-    {"code":"KR-11","name_ko":"서울","name_en":"Seoul","target_tiles":1,"minimum_tiles":1,"color":"#e41a1c"},
-    {"code":"KR-26","name_ko":"부산","name_en":"Busan","target_tiles":1,"minimum_tiles":1,"color":"#377eb8"},
-    {"code":"KR-27","name_ko":"대구","name_en":"Daegu","target_tiles":3,"minimum_tiles":1,"color":"#4daf4a"},
-    {"code":"KR-28","name_ko":"인천","name_en":"Incheon","target_tiles":2,"minimum_tiles":1,"color":"#984ea3"},
-    {"code":"KR-29","name_ko":"광주","name_en":"Gwangju","target_tiles":1,"minimum_tiles":1,"color":"#ff7f00"},
-    {"code":"KR-30","name_ko":"대전","name_en":"Daejeon","target_tiles":1,"minimum_tiles":1,"color":"#a65628"},
-    {"code":"KR-31","name_ko":"울산","name_en":"Ulsan","target_tiles":2,"minimum_tiles":1,"color":"#f781bf"},
-    {"code":"KR-50","name_ko":"세종","name_en":"Sejong","target_tiles":1,"minimum_tiles":1,"color":"#999999"},
-    {"code":"KR-41","name_ko":"경기","name_en":"Gyeonggi","target_tiles":17,"minimum_tiles":1,"color":"#66c2a5"},
-    {"code":"KR-42","name_ko":"강원","name_en":"Gangwon","target_tiles":28,"minimum_tiles":1,"color":"#fc8d62"},
-    {"code":"KR-43","name_ko":"충북","name_en":"Chungbuk","target_tiles":12,"minimum_tiles":1,"color":"#8da0cb"},
-    {"code":"KR-44","name_ko":"충남","name_en":"Chungnam","target_tiles":14,"minimum_tiles":1,"color":"#e78ac3"},
-    {"code":"KR-45","name_ko":"전북","name_en":"Jeonbuk","target_tiles":13,"minimum_tiles":1,"color":"#a6d854"},
-    {"code":"KR-46","name_ko":"전남","name_en":"Jeonnam","target_tiles":20,"minimum_tiles":1,"color":"#ffd92f"},
-    {"code":"KR-47","name_ko":"경북","name_en":"Gyeongbuk","target_tiles":30,"minimum_tiles":1,"color":"#e5c494"},
-    {"code":"KR-48","name_ko":"경남","name_en":"Gyeongnam","target_tiles":17,"minimum_tiles":1,"color":"#b3b3b3"},
-    {"code":"KR-49","name_ko":"제주","name_en":"Jeju","target_tiles":3,"minimum_tiles":1,"color":"#1b9e77"}
+    {"code":"KR-11","name_ko":"서울","name_en":"Seoul","target_tiles":1,"color":"#e41a1c"},
+    {"code":"KR-26","name_ko":"부산","name_en":"Busan","target_tiles":1,"color":"#377eb8"},
+    {"code":"KR-27","name_ko":"대구","name_en":"Daegu","target_tiles":3,"color":"#4daf4a"},
+    {"code":"KR-28","name_ko":"인천","name_en":"Incheon","target_tiles":2,"color":"#984ea3"},
+    {"code":"KR-29","name_ko":"광주","name_en":"Gwangju","target_tiles":1,"color":"#ff7f00"},
+    {"code":"KR-30","name_ko":"대전","name_en":"Daejeon","target_tiles":1,"color":"#a65628"},
+    {"code":"KR-31","name_ko":"울산","name_en":"Ulsan","target_tiles":2,"color":"#f781bf"},
+    {"code":"KR-50","name_ko":"세종","name_en":"Sejong","target_tiles":1,"color":"#999999"},
+    {"code":"KR-41","name_ko":"경기","name_en":"Gyeonggi","target_tiles":17,"color":"#66c2a5"},
+    {"code":"KR-42","name_ko":"강원","name_en":"Gangwon","target_tiles":28,"color":"#fc8d62"},
+    {"code":"KR-43","name_ko":"충북","name_en":"Chungbuk","target_tiles":12,"color":"#8da0cb"},
+    {"code":"KR-44","name_ko":"충남","name_en":"Chungnam","target_tiles":14,"color":"#e78ac3"},
+    {"code":"KR-45","name_ko":"전북","name_en":"Jeonbuk","target_tiles":13,"color":"#a6d854"},
+    {"code":"KR-46","name_ko":"전남","name_en":"Jeonnam","target_tiles":20,"color":"#ffd92f"},
+    {"code":"KR-47","name_ko":"경북","name_en":"Gyeongbuk","target_tiles":30,"color":"#e5c494"},
+    {"code":"KR-48","name_ko":"경남","name_en":"Gyeongnam","target_tiles":17,"color":"#b3b3b3"},
+    {"code":"KR-49","name_ko":"제주","name_en":"Jeju","target_tiles":3,"color":"#1b9e77"}
   ]
 }

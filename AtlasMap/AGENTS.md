@@ -3,13 +3,17 @@
 Follow the repository-root `AGENTS.md`. This directory is the portable QGIS
 project root. Every path stored in QGIS projects, configuration, scripts,
 reports, and metadata must be relative to this directory. Use
-`config/atlas_korea.json` as the only source for map design constants. Select
-country tiles by dominant country-or-ocean overlap with no fixed national tile
-count, then assign each selected tile only to its same-country dominant admin
+`config/atlas_korea.json` as the only source for map design constants.
+`GLOBAL_MAP_RULES.md` is the authoritative cross-country design contract and
+must stay synchronized with allocation code, configuration, and validation.
+Select country tiles by dominant country-or-ocean overlap with no fixed national tile
+count, then guarantee one positive-overlap same-country representative for each
+feasible official Admin-1 and assign remaining tiles to their dominant admin
 overlap. Build KOR and PRK simultaneously on one shared grid; a tile's
 `country_iso3`, dominant territory, and Admin-1 country must agree. Admin target
-counts are advisory; only configured minimum
-representation is mandatory. Never report completion unless build, validation,
+counts are advisory report values only. Never remove another Admin-1's last
+tile or cross a national boundary to satisfy representation. Never report
+completion unless build, validation,
 export, and preview generation all succeed.
 
 Keep administrative ownership (`admin1_code`) independent from population-based
@@ -17,27 +21,33 @@ tile type (`city_class`, `is_capital`). City type determines fill color but
 must never create city boundary lines; only differing admin ownership creates
 administrative borders.
 
+Require an `admin1_source` configuration for every playable country. Use the
+union of that same source for the playable country's national-overlap geometry;
+keep the separate global source only for nearby non-playable country competitors.
+Do not mix one boundary vintage for country dominance with another for Admin-1
+ownership.
+
 National ownership is a hard boundary. No override, Admin-1 assignment, naming
 unit, or population-based classification may transfer a tile between KOR and
 PRK. Shared KOR/PRK hex edges use `edge_type=country`; same-country ownership
 changes use `edge_type=admin`.
 
-Every tile display name must belong to the tile's `admin1_code`; this is a hard
-validation constraint. Assign each tile first to its highest-population
-overlapping same-owner unit. A duplicated unit keeps its largest-overlap
-representative; redistribute its other tiles to unrepresented compatible units
-in population order. Any positive overlap is eligible. Reserve distinct
-compatible representatives for qualifying real cities when the grid permits.
-When real cities compete for limited compatible tiles, process them in
-descending actual-population order; a smaller city must not displace an already
-matched larger city. Spatial overlap and Admin-1 ownership remain mandatory,
-so an isolated smaller city may keep its local tile while a dense metropolitan
-city has no distinct hex at the current resolution.
+Assign each naming unit to its greatest-overlap current authoritative Admin-1,
+clip its geometry to that Admin-1, and consider it only for tiles with the same
+final owner. Process units globally
+in descending population order, letting each reserve its maximum-overlap
+still-unclaimed tile. Fill remaining tiles only after this representative pass,
+using greatest overlap, with population and stable unit code as tie-breakers.
+Any positive overlap is eligible; a smaller unit must not displace an already
+matched larger unit. Spatial overlap and boundaries remain mandatory.
+Use this same configuration-driven algorithm for every current and future
+country. Country-specific naming code paths and exceptions are forbidden.
 Only those real-city anchor tiles receive an initial `city_class`: 100,000+
 means `city` and 1,000,000+ means `metropolis`. An ordinary tile over 100,000
 remains `admin` but sets `city_upgrade_eligible` for player-selected promotion.
-Capital color follows the final name and overrides the city color. Do not publish or display city
-marker points; place data remains an internal classification source.
+Capital status follows the final name but does not override the tile fill. Do not
+publish or display city marker points; place data remains an internal
+classification source.
 
 Use the same GeoNames dump schema in every country. A naming unit population
 must be a positive integer. When an ADM2 record is zero, negative, or invalid,
@@ -57,16 +67,25 @@ medium-variant national sum remains exact. Store only this one population value.
 
 Use exactly three tile fill classes: `admin`, `city`, and `metropolis`.
 Capital is not a fill class: draw one yellow topology-derived outline around
-the complete group of tiles carrying each capital name. All ordinary
+the complete official capital Admin-1 tile group, including differently named
+tiles inside that administration. Cancel its internal shared edges. All ordinary
 administrative tiles share one fill color. Make
 admin-1 ownership legible through the `admin1_tile_borders` layer, whose lines
 must be substantially stronger than ordinary tile outlines.
+Official capital Admin-1 areas use the same one-tile ownership representation
+floor as every other official area. Capital display naming may cross neither
+national nor Admin-1 ownership boundaries.
 
 Render a complete dark outline for each same-owner tile group using explicit
 hex-edge topology. Same-owner shared edges cancel; different-owner and exterior
 edges remain exactly once. Do not publish a separate coastal-line layer until
 the administrative borders and tile layout are final.
-Every tile carrying the same capital name inherits the representative capital
-anchor's `map_class` for display. Keep `city_class`, `is_initial_city`, and the
+Every tile carrying the same represented city/county naming-unit code inherits
+the representative city anchor's `map_class` for display. This applies to
+ordinary cities and capitals. Keep `city_class`, `is_initial_city`, and the
 actual city population only on the representative anchor so national population
 is never duplicated.
+
+Tile-name labels have no zoomed-in cutoff and must fit completely inside their
+own hexagons. Admin-1 summary labels are overview-only and must be hidden at
+close zoom so they cannot obscure individual tile names.
