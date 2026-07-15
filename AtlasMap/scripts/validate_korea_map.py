@@ -407,25 +407,10 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         coast_layer = QgsVectorLayer(
             f"{gpkg}|layername=coastal_tile_outlines", "coastal_tile_outlines", "ogr"
         )
-        coast_features = list(coast_layer.getFeatures()) if coast_layer.isValid() else []
-        candidate_by_id = {
-            str(candidate["candidate_id"]): candidate for candidate in candidate_features
-        }
-        invalid_coast_edges = []
-        for edge in coast_features:
-            tile_id = str(edge["tile_id"] or "")
-            ocean_id = str(edge["ocean_candidate_id"] or "")
-            ocean_candidate = candidate_by_id.get(ocean_id)
-            if (
-                tile_id not in set(ids) or ocean_candidate is None
-                or str(ocean_candidate["dominant_territory"] or "") != settings["grid"]["ocean_code"]
-                or bool(ocean_candidate["selected"]) or edge.geometry().isEmpty()
-            ):
-                invalid_coast_edges.append((tile_id, ocean_id))
         check(
-            "Coastal lines are ocean-adjacent outer edges only",
-            coast_layer.isValid() and bool(coast_features) and not invalid_coast_edges,
-            f"edges={len(coast_features)}, invalid={invalid_coast_edges}",
+            "Coastal line layer is intentionally absent",
+            not coast_layer.isValid(),
+            "coastal_tile_outlines is not published during border development",
         )
 
         target_area = float(settings["grid"]["target_area_km2"])

@@ -1,6 +1,6 @@
 # Atlas Korea validation report
 
-Generated: 2026-07-15T01:54:15.429436+00:00
+Generated: 2026-07-15T02:00:36.249006+00:00
 
 Overall result: **PASS**
 
@@ -31,7 +31,7 @@ Overall result: **PASS**
 | Exactly four tile color classes | PASS | actual=['admin', 'capital', 'city', 'metropolis'] |
 | Metropolis fill darker than city fill | PASS | city=#4aa3d8, metropolis=#173f6f |
 | Same-owner groups have complete topology-derived outlines | PASS | edges=253, invalid=[], topology=[], missing=[] |
-| Coastal lines are ocean-adjacent outer edges only | PASS | edges=95, invalid=[] |
+| Coastal line layer is intentionally absent | PASS | coastal_tile_outlines is not published during border development |
 | Valid geometries | PASS | invalid=[] |
 | Complete regular hexagons | PASS | invalid=[] |
 | Hex target area | PASS | outside_tolerance=[] |

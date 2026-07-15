@@ -30,6 +30,5 @@ must be substantially stronger than ordinary tile outlines.
 
 Render a complete dark outline for each same-owner tile group using explicit
 hex-edge topology. Same-owner shared edges cancel; different-owner and exterior
-edges remain exactly once. Coastal lines may contain only outer tile
-edges adjacent to ocean-dominant unselected cells; never draw all six sides of
-a coastal tile.
+edges remain exactly once. Do not publish a separate coastal-line layer until
+the administrative borders and tile layout are final.

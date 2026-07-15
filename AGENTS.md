@@ -243,9 +243,9 @@ final named unit; city point data is an internal matching source only.
   same-owner tile groups. Cancel every edge shared by same-owner tiles; retain
   different-owner and exterior edges exactly once. Never derive these outlines
   from dissolved polygon rings.
-  Keep normal tile edges, admin borders, and coastal edges visually distinct.
-  A coastal line may include only a selected tile edge shared with an
-  ocean-dominant unselected grid cell; never outline an entire coastal hex.
+  Keep normal tile edges and admin borders visually distinct. Do not publish a
+  separate coastal-line layer until the administrative borders and tile layout
+  are final.
 - Label each admin-1 area with its name and assigned tile count.
 - Show `tile_id` labels only at an appropriate zoom scale.
 - Put real source boundaries in a separate toggleable validation group so they

@@ -31,10 +31,9 @@ gold capital. Ordinary tiles do not receive separate province colors.
 Administrative borders are the complete topology-derived outlines of same-owner
 tile groups. Every hex edge is keyed explicitly: edges shared by tiles with the
 same `admin1_code` cancel, while different-owner and exterior edges remain and
-render once above the tile fills. Solid blue coastal lines include only outer
-tile edges adjacent to an ocean-dominant grid cell;
-they never outline a complete coastal hex. No city-marker layer is displayed or
-published.
+render once above the tile fills. The separate coastal-line layer is temporarily
+omitted until the administrative borders and tile layout are final. No
+city-marker layer is displayed or published.
 
 ## Quick start (macOS)
 
@@ -61,7 +60,7 @@ path of `qgis_process.exe` before running either launcher.
 
 - `Atlas_Korea.qgz`: QGIS project; open this first in QGIS.
 - `data/processed/Atlas_Korea.gpkg`: source, city/county naming reference,
-  candidates, final tiles, admin borders, and ocean-adjacent coastal edges.
+  candidates, final tiles, and admin borders. Coastal lines are deferred.
 - `previews/Atlas_Korea_Overview.png`: rendered overview.
 - `reports/allocation_report.md`: target and actual tile allocation.
 - `reports/validation_report.md`: release-gate validation results.

@@ -847,20 +847,6 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                     f"Hex edge {edge_key} belongs to {len(members)} selected tiles"
                 )
 
-        coastal_edge_records = []
-        for index in selected_indexes:
-            selected = candidates[index]
-            for other_index, other in enumerate(candidates):
-                if other_index in assignments or other["dominant_territory"] != grid["ocean_code"]:
-                    continue
-                if not selected["geometry"].boundingBox().intersects(other["geometry"].boundingBox()):
-                    continue
-                shared_geometry = shared_edge_geometry(selected["geometry"], other["geometry"])
-                if shared_geometry.length() >= side * 0.5:
-                    coastal_edge_records.append(
-                        (shared_geometry, selected["tile_id"], other["tile_id"])
-                    )
-
         city_records = load_city_source(root, settings)
         naming_units = build_naming_units(
             root, settings, target_crs, context, admin_geometries, city_records
@@ -1109,24 +1095,11 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             border_features.append(feature)
         border_layer.dataProvider().addFeatures(border_features)
 
-        coast_fields = QgsFields()
-        coast_fields.append(QgsField("tile_id", QVariant.String))
-        coast_fields.append(QgsField("ocean_candidate_id", QVariant.String))
-        coast_layer = memory_layer("LineString", target_crs, "coastal_tile_outlines", coast_fields)
-        coast_features = []
-        for geometry, tile_id, ocean_candidate_id in coastal_edge_records:
-            feature = QgsFeature(coast_layer.fields())
-            feature.setGeometry(geometry)
-            feature.setAttributes([tile_id, ocean_candidate_id])
-            coast_features.append(feature)
-        coast_layer.dataProvider().addFeatures(coast_features)
-
         write_gpkg_layer(admin_layer, gpkg_path, "admin1_source", True)
         write_gpkg_layer(candidate_layer, gpkg_path, "hex_candidates", False)
         write_gpkg_layer(tile_layer, gpkg_path, "korea_tiles", False)
         write_gpkg_layer(naming_layer, gpkg_path, "admin2_naming_source", False)
         write_gpkg_layer(border_layer, gpkg_path, "admin1_tile_borders", False)
-        write_gpkg_layer(coast_layer, gpkg_path, "coastal_tile_outlines", False)
         feedback.pushInfo(f"Wrote GeoPackage: {gpkg_path}")
         feedback.setProgress(88)
 
@@ -1139,10 +1112,9 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             f"{gpkg_path}|layername=admin2_naming_source", "City-county naming reference", "ogr"
         )
         persisted_borders = QgsVectorLayer(f"{gpkg_path}|layername=admin1_tile_borders", "Game admin borders", "ogr")
-        persisted_coast = QgsVectorLayer(f"{gpkg_path}|layername=coastal_tile_outlines", "Coastal tile outlines", "ogr")
         for layer in (
             persisted_tiles, persisted_admin, persisted_admin_labels, persisted_candidates,
-            persisted_naming, persisted_borders, persisted_coast,
+            persisted_naming, persisted_borders,
         ):
             if not layer.isValid():
                 raise QgsProcessingException(f"Failed to reload persisted layer: {layer.name()}")
@@ -1216,16 +1188,6 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 )
             )
         )
-        persisted_coast.setRenderer(
-            QgsSingleSymbolRenderer(
-                QgsLineSymbol.createSimple(
-                    {
-                        "line_color": "#1677b8", "line_width": "1.0",
-                        "line_style": "solid", "capstyle": "round", "joinstyle": "round",
-                    }
-                )
-            )
-        )
         persisted_naming.setRenderer(
             QgsSingleSymbolRenderer(
                 QgsFillSymbol.createSimple(
@@ -1247,9 +1209,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         project.addMapLayer(persisted_tiles, False)
         project.addMapLayer(persisted_admin_labels, False)
         project.addMapLayer(persisted_borders, False)
-        project.addMapLayer(persisted_coast, False)
         game_group.addLayer(persisted_admin_labels)
-        game_group.addLayer(persisted_coast)
         game_group.addLayer(persisted_borders)
         game_group.addLayer(persisted_tiles)
         project.addMapLayer(persisted_admin, False)
@@ -1264,7 +1224,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             raise QgsProcessingException(f"Failed to write QGIS project: {project_path}")
 
         render_preview(
-            [persisted_admin_labels, persisted_coast, persisted_borders, persisted_tiles],
+            [persisted_admin_labels, persisted_borders, persisted_tiles],
             preview_path,
         )
 
