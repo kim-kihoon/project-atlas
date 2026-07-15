@@ -1,6 +1,6 @@
 # Atlas Korea tile allocation report
 
-Generated: 2026-07-15T00:05:14.533170+00:00
+Generated: 2026-07-15T00:20:32.580803+00:00
 
 - Orientation: `pointy_top`
 - Final tiles: **160**
@@ -42,17 +42,14 @@ Generated: 2026-07-15T00:05:14.533170+00:00
 
 ## Tile naming
 
-- Default: city/county with the largest hex overlap
-- Minimum overlap share for a population exception: 5%
-- Exception: a missing higher-population unit may take one overlapping tile only when the current unit keeps at least one other tile
+- Hard constraint: tile name must belong to the tile's assigned admin-1 owner
+- First pass: one representative tile per city/county through population-priority matching
+- Minimum overlap share for first-pass matching: 5%
+- Second pass: remaining tiles use the largest-overlap city/county within the same owner
 - Naming units: 161
-- Population-representation exceptions: 5
-
-- `KOR_P_R100031_C100023`: `밀양` (108,621) -> `김해` (531,966); overlap 222.44 km2
-- `KOR_P_R100035_C100019`: `영동` (43,680) -> `옥천` (56,634); overlap 226.47 km2
-- `KOR_P_R100038_C100022`: `단양` (37,320) -> `예천` (58,081); overlap 150.88 km2
-- `KOR_P_R100041_C100024`: `삼척` (72,368) -> `동해` (103,115); overlap 96.08 km2
-- `KOR_P_R100044_C100022`: `인제` (34,120) -> `속초` (89,461); overlap 51.54 km2
+- Uniquely represented units: 132
+- Dominant-overlap fill tiles: 27
+- Same-owner nearest-boundary fallbacks: 1
 
 ## Population-based city classes
 
@@ -61,6 +58,7 @@ City class changes tile fill only; administrative ownership and borders remain s
 - Capital markers: 1
 - Metropolis markers (1,000,000+): 11
 - City markers (500,000-999,999): 12
+- Markers linked to a same-name tile: 19/23
 
 ## Boundary tiles
 

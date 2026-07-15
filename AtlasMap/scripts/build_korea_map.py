@@ -269,15 +269,19 @@ def build_naming_units(root, settings, target_crs, context, admin_geometries, ci
     return units
 
 
-def allocate_tile_names(candidates, selected_indexes, units, minimum_share, feedback):
-    """Use maximum area, then give higher-population missing units one safe tile."""
+def allocate_tile_names(
+    candidates, selected_indexes, admin_assignments, units, minimum_share, feedback
+):
+    """Match first representatives globally, then fill within each tile owner."""
     unit_by_code = {unit["unit_code"]: unit for unit in units}
     overlaps = {}
-    assignments = {}
+    nearest_fallbacks = set()
     for index in selected_indexes:
         tile = candidates[index]
         scores = {}
         for unit in units:
+            if unit["admin1_code"] != admin_assignments[index]:
+                continue
             geometry = unit["geometry"]
             if not tile["geometry"].boundingBox().intersects(geometry.boundingBox()):
                 continue
@@ -285,41 +289,92 @@ def allocate_tile_names(candidates, selected_indexes, units, minimum_share, feed
             if area > 0:
                 scores[unit["unit_code"]] = area
         if not scores:
-            raise QgsProcessingException(f"No naming unit overlaps {tile['tile_id']}")
+            owner_units = [
+                unit for unit in units if unit["admin1_code"] == admin_assignments[index]
+            ]
+            if not owner_units:
+                raise QgsProcessingException(
+                    f"No naming units configured for owner {admin_assignments[index]}"
+                )
+            nearest = min(
+                owner_units,
+                key=lambda unit: (
+                    tile["geometry"].distance(unit["geometry"]), unit["unit_code"]
+                ),
+            )
+            scores[nearest["unit_code"]] = 0.0
+            nearest_fallbacks.add(index)
         overlaps[index] = scores
-        assignments[index] = sorted(scores, key=lambda code: (-scores[code], code))[0]
 
-    counts = Counter(assignments.values())
-    exceptions = {}
-    missing = [unit for unit in units if counts[unit["unit_code"]] == 0 and unit["population_known"]]
-    missing.sort(key=lambda unit: (-unit["population"], unit["unit_code"]))
-    for unit in missing:
+    eligible_tiles = {}
+    for unit in units:
         code = unit["unit_code"]
         options = []
         for index in selected_indexes:
             area = overlaps[index].get(code, 0.0)
-            share = area / candidates[index]["geometry"].area()
-            if share < minimum_share:
+            if area / candidates[index]["geometry"].area() >= minimum_share:
+                options.append(index)
+        eligible_tiles[code] = sorted(
+            options,
+            key=lambda index: (-overlaps[index][code], candidates[index]["tile_id"]),
+        )
+
+    # Maximum-cardinality bipartite matching. Processing high-population units
+    # first preserves them when there are fewer usable tiles than units, while
+    # augmenting paths avoid wasting a tile that can represent another unit.
+    tile_to_unit = {}
+    unit_to_tile = {}
+
+    def assign_unit(code, seen_tiles, seen_units):
+        if code in seen_units:
+            return False
+        seen_units.add(code)
+        for index in eligible_tiles[code]:
+            if index in seen_tiles:
                 continue
-            holder_code = assignments[index]
-            holder = unit_by_code[holder_code]
-            if counts[holder_code] <= 1 or not holder["population_known"]:
-                continue
-            if unit["population"] <= holder["population"]:
-                continue
-            options.append((-area, -share, candidates[index]["tile_id"], index, holder_code))
-        if not options:
+            seen_tiles.add(index)
+            incumbent = tile_to_unit.get(index)
+            if incumbent is None or assign_unit(incumbent, seen_tiles, seen_units):
+                tile_to_unit[index] = code
+                unit_to_tile[code] = index
+                if incumbent is not None and unit_to_tile.get(incumbent) == index:
+                    del unit_to_tile[incumbent]
+                return True
+        return False
+
+    priority_units = sorted(
+        units,
+        key=lambda unit: (
+            0 if unit["population_known"] else 1,
+            -unit["population"], unit["unit_code"],
+        ),
+    )
+    for unit in priority_units:
+        assign_unit(unit["unit_code"], set(), set())
+
+    assignments = dict(tile_to_unit)
+    methods = {index: "unique_representation" for index in assignments}
+    for index in selected_indexes:
+        if index in assignments:
             continue
-        _, _, _, index, holder_code = sorted(options)[0]
-        assignments[index] = code
-        counts[holder_code] -= 1
-        counts[code] += 1
-        exceptions[index] = holder_code
+        scores = overlaps[index]
+        assignments[index] = sorted(scores, key=lambda code: (-scores[code], code))[0]
+        methods[index] = (
+            "owner_nearest_fallback" if index in nearest_fallbacks else "dominant_overlap_fill"
+        )
+
+    mismatched = [
+        candidates[index]["tile_id"] for index, code in assignments.items()
+        if unit_by_code[code]["admin1_code"] != admin_assignments[index]
+    ]
+    if mismatched:
+        raise QgsProcessingException(f"Naming/admin ownership mismatch: {mismatched}")
     feedback.pushInfo(
         f"Named {len(selected_indexes)} tiles from {len(units)} units; "
-        f"applied {len(exceptions)} population-representation exceptions"
+        f"represented {len(unit_to_tile)} unique units; "
+        f"used {len(nearest_fallbacks)} same-owner nearest-boundary fallbacks"
     )
-    return assignments, overlaps, exceptions
+    return assignments, overlaps, methods, unit_to_tile
 
 
 def allocate_tiles(candidates, admins, country_iso3, feedback):
@@ -695,55 +750,42 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         naming_units = build_naming_units(
             root, settings, target_crs, context, admin_geometries, city_records
         )
-        tile_name_assignments, tile_name_overlaps, naming_exceptions = allocate_tile_names(
-            candidates, selected_indexes, naming_units,
+        tile_name_assignments, tile_name_overlaps, tile_name_methods, unique_unit_tiles = allocate_tile_names(
+            candidates, selected_indexes, assignments, naming_units,
             float(settings["tile_naming"]["minimum_tile_share"]), feedback,
         )
         naming_unit_by_code = {unit["unit_code"]: unit for unit in naming_units}
 
         city_crs = QgsCoordinateReferenceSystem("EPSG:4326")
         city_transform = QgsCoordinateTransform(city_crs, target_crs, context.transformContext())
-        city_by_tile = {}
+        city_by_unit_code = {}
         city_classes = settings["city_classification"]
         for city in city_records:
             point = city_transform.transform(QgsPointXY(city["longitude"], city["latitude"]))
             geometry = QgsGeometry.fromPointXY(point)
-            containing = [
-                index for index in selected_indexes
-                if candidates[index]["geometry"].contains(geometry)
-                or candidates[index]["geometry"].intersects(geometry)
-            ]
-            if containing:
-                tile_index = sorted(containing, key=lambda index: candidates[index]["tile_id"])[0]
-            else:
-                tile_index = min(
-                    selected_indexes,
-                    key=lambda index: (
-                        candidates[index]["geometry"].distance(geometry),
-                        candidates[index]["tile_id"],
-                    ),
-                )
+            admin1_code = settings["tile_naming"]["geonames_admin1_codes"].get(
+                city["admin1_source_code"]
+            )
+            unit_code = f"{admin1_code}:{city['canonical']}" if admin1_code else None
             city_class = (
                 "metropolis" if city["population"] >= int(city_classes["metropolis_population_min"])
                 else "city"
             )
+            named_indexes = sorted(
+                [index for index, code in tile_name_assignments.items() if code == unit_code],
+                key=lambda index: candidates[index]["tile_id"],
+            )
             city.update(
                 {
-                    "geometry": geometry, "tile_index": tile_index,
-                    "tile_id": candidates[tile_index]["tile_id"],
-                    "admin1_code": assignments[tile_index],
+                    "geometry": geometry, "unit_code": unit_code,
+                    "tile_id": candidates[named_indexes[0]]["tile_id"] if named_indexes else None,
+                    "admin1_code": admin1_code,
                     "city_class": city_class,
                     "is_capital": city["city_id"] == settings["city_source"]["capital_geoname_id"],
                 }
             )
-            current = city_by_tile.get(tile_index)
-            rank = (1 if city["is_capital"] else 0, city["population"], city["canonical"])
-            current_rank = (
-                (1 if current["is_capital"] else 0, current["population"], current["canonical"])
-                if current else None
-            )
-            if current is None or rank > current_rank:
-                city_by_tile[tile_index] = city
+            if unit_code in naming_unit_by_code:
+                city_by_unit_code[unit_code] = city
 
         candidate_fields = QgsFields()
         for name, kind in (
@@ -819,8 +861,6 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             ("tile_name_en", QVariant.String), ("tile_name_method", QVariant.String),
             ("tile_name_population", QVariant.LongLong),
             ("tile_name_overlap_km2", QVariant.Double),
-            ("tile_name_previous_code", QVariant.String),
-            ("tile_name_previous_population", QVariant.LongLong),
             ("district_slots", QVariant.Int), ("district_1", QVariant.String),
             ("district_2", QVariant.String), ("district_3", QVariant.String),
             ("primary_industry", QVariant.String), ("terrain", QVariant.String),
@@ -840,7 +880,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             naming_code = tile_name_assignments[index]
             naming_unit = naming_unit_by_code[naming_code]
             naming_overlap = tile_name_overlaps[index].get(naming_code, 0.0)
-            city = city_by_tile.get(index)
+            city = city_by_unit_code.get(naming_code)
             city_class = city["city_class"] if city else None
             is_capital = bool(city and city["is_capital"])
             district_slots = 3 if city_class == "metropolis" else 2 if city_class == "city" else 1
@@ -863,18 +903,12 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 "tile_name_code": naming_code,
                 "tile_name_ko": naming_unit["name_ko"],
                 "tile_name_en": naming_unit["name_en"],
-                "tile_name_method": (
-                    "population_representation" if index in naming_exceptions else "dominant_overlap"
-                ),
+                "tile_name_method": tile_name_methods[index],
                 "tile_name_population": (
+                    city["population"] if city else
                     naming_unit["population"] if naming_unit["population_known"] else None
                 ),
                 "tile_name_overlap_km2": naming_overlap / 1_000_000.0,
-                "tile_name_previous_code": naming_exceptions.get(index),
-                "tile_name_previous_population": (
-                    naming_unit_by_code[naming_exceptions[index]]["population"]
-                    if index in naming_exceptions else None
-                ),
                 "district_slots": district_slots,
                 "source_year": int(settings["source"]["source_year"]),
                 "manual_override": candidate["tile_id"] in override_reasons,
@@ -910,6 +944,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             ("city_name_en", QVariant.String), ("population", QVariant.LongLong),
             ("city_class", QVariant.String), ("is_capital", QVariant.Bool),
             ("tile_id", QVariant.String), ("admin1_code", QVariant.String),
+            ("unit_code", QVariant.String),
             ("source_year", QVariant.Int), ("source_url", QVariant.String),
         ):
             city_fields.append(QgsField(name, kind))
@@ -922,6 +957,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 [
                     city["city_id"], city["name_ko"], city["name_en"], city["population"],
                     city["city_class"], city["is_capital"], city["tile_id"], city["admin1_code"],
+                    city["unit_code"],
                     int(city["source_date"][:4]) if city["source_date"][:4].isdigit() else None,
                     "https://www.geonames.org/export/",
                 ]
@@ -1188,30 +1224,19 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         report_lines.extend(["", "## Tile naming", ""])
         report_lines.extend(
             [
-                "- Default: city/county with the largest hex overlap",
-                f"- Minimum overlap share for a population exception: "
+                "- Hard constraint: tile name must belong to the tile's assigned admin-1 owner",
+                "- First pass: one representative tile per city/county through population-priority matching",
+                f"- Minimum overlap share for first-pass matching: "
                 f"{float(settings['tile_naming']['minimum_tile_share']):.0%}",
-                "- Exception: a missing higher-population unit may take one overlapping tile only "
-                "when the current unit keeps at least one other tile",
+                "- Second pass: remaining tiles use the largest-overlap city/county within the same owner",
                 f"- Naming units: {len(naming_units)}",
-                f"- Population-representation exceptions: {len(naming_exceptions)}",
-                "",
+                f"- Uniquely represented units: {len(unique_unit_tiles)}",
+                f"- Dominant-overlap fill tiles: "
+                f"{sum(1 for method in tile_name_methods.values() if method == 'dominant_overlap_fill')}",
+                f"- Same-owner nearest-boundary fallbacks: "
+                f"{sum(1 for method in tile_name_methods.values() if method == 'owner_nearest_fallback')}",
             ]
         )
-        if naming_exceptions:
-            for index, previous_code in sorted(
-                naming_exceptions.items(), key=lambda item: candidates[item[0]]["tile_id"]
-            ):
-                assigned_unit = naming_unit_by_code[tile_name_assignments[index]]
-                previous_unit = naming_unit_by_code[previous_code]
-                report_lines.append(
-                    f"- `{candidates[index]['tile_id']}`: `{previous_unit['name_ko']}` "
-                    f"({previous_unit['population']:,}) -> `{assigned_unit['name_ko']}` "
-                    f"({assigned_unit['population']:,}); overlap "
-                    f"{tile_name_overlaps[index][assigned_unit['unit_code']] / 1_000_000.0:.2f} km2"
-                )
-        else:
-            report_lines.append("- None")
         city_counts = Counter(city["city_class"] for city in city_records)
         report_lines.extend(
             [
@@ -1220,6 +1245,8 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 f"- Capital markers: {sum(1 for city in city_records if city['is_capital'])}",
                 f"- Metropolis markers (1,000,000+): {city_counts.get('metropolis', 0)}",
                 f"- City markers (500,000-999,999): {city_counts.get('city', 0)}",
+                f"- Markers linked to a same-name tile: "
+                f"{sum(1 for city in city_records if city['tile_id'])}/{len(city_records)}",
             ]
         )
         boundary_tiles = []

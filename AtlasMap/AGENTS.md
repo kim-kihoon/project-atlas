@@ -15,9 +15,9 @@ tile type (`city_class`, `is_capital`). City type may override fill color but
 must never create city boundary lines; only differing admin ownership creates
 administrative borders.
 
-Keep tile display naming independent as well. The default tile name is the
-largest-overlap configured city/county unit. Review missing units by descending
-known population and allow one representative-name exception only above the
-configured overlap floor, only against a lower-population current name, and
-only when the current unit keeps at least one other tile. A naming exception
-must never change `admin1_code`, `city_class`, fill classification, or borders.
+Every tile display name must belong to the tile's `admin1_code`; this is a hard
+validation constraint. First match eligible same-owner cities/counties to at
+most one representative tile with population priority and overlap preference,
+then fill remaining tiles by largest same-owner overlap. Derive `city_class`
+and capital color from the final named unit. City marker points are reference
+data only and must not independently select or color a tile.

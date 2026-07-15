@@ -17,12 +17,12 @@ containing Yongin remains owned by Gyeonggi (`admin1_code=KR-41`) while its
 population-based `city_class` can be `metropolis`. City status changes fill
 color, never administrative borders.
 
-Tile display names are a third independent dimension. Each tile normally uses
-the city or county occupying its largest area. A missing unit is reviewed in
-population order and may receive one representative tile only when it occupies
-at least 5% of that hex, has a larger known population than the current name,
-and the current unit retains another tile. This population exception changes
-only the display name.
+Tile display names must belong to the tile's administrative owner. Within each
+admin-1 area, cities and counties occupying at least 5% of a hex enter a global
+first-pass matching that gives each unit at most one representative tile, with
+known population as the priority and overlap as the deterministic preference.
+Remaining tiles use their largest-overlap same-owner unit. City class and
+capital color follow the final tile name, not an independently located point.
 
 ## Quick start (macOS)
 

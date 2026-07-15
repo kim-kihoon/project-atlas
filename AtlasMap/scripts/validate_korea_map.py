@@ -188,8 +188,7 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
 
         required_naming_fields = {
             "tile_name_code", "tile_name_ko", "tile_name_en", "tile_name_method",
-            "tile_name_population", "tile_name_overlap_km2", "tile_name_previous_code",
-            "tile_name_previous_population", "map_class",
+            "tile_name_population", "tile_name_overlap_km2", "map_class",
         }
         missing_naming_fields = sorted(required_naming_fields - set(layer.fields().names()))
         check("Tile naming fields", not missing_naming_fields, f"missing={missing_naming_fields}")
@@ -200,7 +199,9 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             or not str(feature["tile_name_en"] or "").strip()
         ] if not missing_naming_fields else ids
         check("Every tile has one display name", not blank_names, f"blank={blank_names}")
-        allowed_naming_methods = {"dominant_overlap", "population_representation"}
+        allowed_naming_methods = {
+            "unique_representation", "dominant_overlap_fill", "owner_nearest_fallback"
+        }
         invalid_naming_methods = [
             (str(feature["tile_id"]), str(feature["tile_name_method"] or ""))
             for feature in features
@@ -217,12 +218,24 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         }
         check("Naming reference layer", naming_layer.isValid() and bool(naming_features),
               f"units={len(naming_features)}")
+        ownership_name_mismatches = []
+        for tile in features:
+            unit = naming_by_code.get(str(tile["tile_name_code"] or ""))
+            if unit is None or str(unit["admin1_code"] or "") != str(tile["admin1_code"] or ""):
+                ownership_name_mismatches.append(
+                    (str(tile["tile_id"]), str(tile["admin1_code"] or ""),
+                     str(tile["tile_name_code"] or ""))
+                )
+        check("Tile name belongs to admin owner", not ownership_name_mismatches,
+              f"mismatches={ownership_name_mismatches}")
         dominant_name_mismatches = []
         for tile in features:
-            if str(tile["tile_name_method"] or "") != "dominant_overlap":
+            if str(tile["tile_name_method"] or "") != "dominant_overlap_fill":
                 continue
             scores = {}
             for unit in naming_features:
+                if str(unit["admin1_code"] or "") != str(tile["admin1_code"] or ""):
+                    continue
                 if not tile.geometry().boundingBox().intersects(unit.geometry().boundingBox()):
                     continue
                 area = tile.geometry().intersection(unit.geometry()).area()
@@ -235,59 +248,74 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
               f"mismatches={dominant_name_mismatches}")
 
         final_name_counts = Counter(str(feature["tile_name_code"] or "") for feature in features)
-        exception_errors = []
+        representation_errors = []
+        representation_codes = []
         minimum_share = float(settings["tile_naming"]["minimum_tile_share"])
         for tile in features:
-            if str(tile["tile_name_method"] or "") != "population_representation":
+            if str(tile["tile_name_method"] or "") != "unique_representation":
                 continue
             code = str(tile["tile_name_code"] or "")
-            previous = str(tile["tile_name_previous_code"] or "")
-            population = int(tile["tile_name_population"] or 0)
-            previous_population = int(tile["tile_name_previous_population"] or 0)
+            representation_codes.append(code)
             overlap_share = (
                 float(tile["tile_name_overlap_km2"] or 0.0)
                 / float(tile["area_km2"] or 1.0)
             )
-            if (
-                code not in naming_by_code or previous not in naming_by_code
-                or population <= previous_population or previous_population <= 0
-                or overlap_share + 1e-9 < minimum_share
-                or final_name_counts.get(previous, 0) < 1
-            ):
-                exception_errors.append(
-                    (str(tile["tile_id"]), population, previous_population, round(overlap_share, 4))
+            if code not in naming_by_code or overlap_share + 1e-9 < minimum_share:
+                representation_errors.append(
+                    (str(tile["tile_id"]), code, round(overlap_share, 4))
                 )
-        check("Population naming exceptions", not exception_errors, f"invalid={exception_errors}")
+        duplicate_representations = sorted(
+            code for code, count in Counter(representation_codes).items() if count > 1
+        )
+        check("Unique first-pass representatives",
+              not representation_errors and not duplicate_representations,
+              f"invalid={representation_errors}, duplicates={duplicate_representations}")
 
         city_layer = QgsVectorLayer(f"{gpkg}|layername=city_markers", "city_markers", "ogr")
         city_features = list(city_layer.getFeatures()) if city_layer.isValid() else []
         city_min = int(settings["city_classification"]["city_population_min"])
         metropolis_min = int(settings["city_classification"]["metropolis_population_min"])
         invalid_city_markers = []
-        representative_by_tile = {}
+        city_by_unit = {}
+        city_link_errors = []
+        tiles_by_id = {str(tile["tile_id"]): tile for tile in features}
         for city in city_features:
             population = int(city["population"] or 0)
             expected_class = "metropolis" if population >= metropolis_min else "city"
             if population < city_min or str(city["city_class"] or "") != expected_class:
                 invalid_city_markers.append(str(city["city_id"]))
             tile_id = str(city["tile_id"] or "")
-            rank = (
-                1 if bool(city["is_capital"]) else 0,
-                population,
-                str(city["city_name_en"] or "").lower().replace(" ", "-"),
-            )
-            if tile_id not in representative_by_tile or rank > representative_by_tile[tile_id][0]:
-                representative_by_tile[tile_id] = (rank, city)
+            city_by_unit[str(city["unit_code"] or "")] = city
+            if tile_id:
+                linked_tile = tiles_by_id.get(tile_id)
+                if (
+                    linked_tile is None
+                    or str(linked_tile["tile_name_code"] or "") != str(city["unit_code"] or "")
+                    or str(linked_tile["admin1_code"] or "") != str(city["admin1_code"] or "")
+                ):
+                    city_link_errors.append(str(city["city_id"]))
         check("Population-based city markers", city_layer.isValid() and not invalid_city_markers,
               f"markers={len(city_features)}, invalid={invalid_city_markers}")
+        check("City markers link to same-name owner tiles", not city_link_errors,
+              f"invalid={city_link_errors}")
+        capital_tiles = [tile for tile in features if str(tile["map_class"] or "") == "capital"]
+        capital_markers = [city for city in city_features if bool(city["is_capital"])]
+        check(
+            "Exactly one capital tile",
+            len(capital_tiles) == 1 and len(capital_markers) == 1
+            and str(capital_tiles[0]["tile_name_code"] or "")
+            == str(capital_markers[0]["unit_code"] or ""),
+            f"tiles={len(capital_tiles)}, markers={len(capital_markers)}",
+        )
         tile_city_mismatches = []
         for tile in features:
             tile_id = str(tile["tile_id"])
-            representative = representative_by_tile.get(tile_id)
-            if representative:
-                city = representative[1]
+            city = city_by_unit.get(str(tile["tile_name_code"] or ""))
+            if city:
                 expected_map_class = "capital" if bool(city["is_capital"]) else str(city["city_class"])
                 if (
+                    str(tile["tile_name_ko"] or "") != str(city["city_name_ko"] or "")
+                    or
                     str(tile["city_name_ko"] or "") != str(city["city_name_ko"] or "")
                     or str(tile["city_class"] or "") != str(city["city_class"] or "")
                     or str(tile["map_class"] or "") != expected_map_class
@@ -295,7 +323,7 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
                     tile_city_mismatches.append(tile_id)
             elif str(tile["map_class"] or "") != str(tile["admin1_code"] or ""):
                 tile_city_mismatches.append(tile_id)
-        check("City class independent from admin ownership", not tile_city_mismatches,
+        check("City class follows final same-owner tile name", not tile_city_mismatches,
               f"mismatches={tile_city_mismatches}")
 
         target_area = float(settings["grid"]["target_area_km2"])

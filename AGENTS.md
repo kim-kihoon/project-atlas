@@ -226,11 +226,11 @@ Gyeonggi-owned metropolis tile. City/capital status may override fill color but
 must not create city boundary lines. Administrative borders follow only shared
 edges where `admin1_code` differs.
 
-Tile display names are also independent. Default to the city/county with the
-largest tile overlap. A missing unit with known population may receive one
-representative tile only above the configured overlap floor and under the population
-comparison rules, without eliminating the current unit's last tile. Naming
-never changes administrative ownership, city class, fill class, or borders.
+Tile display names are subordinate to administrative ownership: the named
+city/county must belong to the tile's `admin1_code`. Use a population-priority
+one-representative matching among eligible same-owner units, then fill remaining
+tiles by largest same-owner overlap. Derive capital/city fill class from the
+final named unit; city point markers never independently assign a tile.
 
 ## QGIS Project and Outputs
 
