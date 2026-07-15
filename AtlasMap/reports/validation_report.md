@@ -1,6 +1,6 @@
 # Atlas Korean Peninsula validation report
 
-Generated: 2026-07-15T10:37:12.477507+00:00
+Generated: 2026-07-15T11:48:11.216818+00:00
 
 Overall result: **PASS**
 
@@ -39,7 +39,7 @@ Overall result: **PASS**
 | Tile populations exactly reconcile to UN WPP national totals | PASS | mismatches={} |
 | Every country has capital tiles | PASS | countries={'KOR': 1, 'PRK': 4} |
 | Every tile named for a capital uses the capital class | PASS | invalid=[] |
-| City class follows each tile's single population | PASS | mismatches=[] |
+| Initial city anchors and player upgrade eligibility are consistent | PASS | mismatches=[] |
 | Exactly four tile color classes | PASS | actual=['admin', 'capital', 'city', 'metropolis'] |
 | Metropolis fill darker than city fill | PASS | city=#4aa3d8, metropolis=#173f6f |
 | Same-owner groups have complete topology-derived outlines | PASS | edges=526, invalid=[], topology=[], missing=[] |

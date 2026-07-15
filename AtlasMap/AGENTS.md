@@ -26,9 +26,12 @@ Every tile display name must belong to the tile's `admin1_code`; this is a hard
 validation constraint. Assign each tile first to its highest-population
 overlapping same-owner unit. A duplicated unit keeps its largest-overlap
 representative; redistribute its other tiles to unrepresented compatible units
-in population order. Any positive overlap is eligible. Derive `city_class`
-solely from the tile's one game-population value. Capital color follows the
-final name and overrides the population color. Do not publish or display city
+in population order. Any positive overlap is eligible. Reserve distinct
+compatible representatives for qualifying real cities when the grid permits.
+Only those real-city anchor tiles receive an initial `city_class`: 100,000+
+means `city` and 1,000,000+ means `metropolis`. An ordinary tile over 100,000
+remains `admin` but sets `city_upgrade_eligible` for player-selected promotion.
+Capital color follows the final name and overrides the city color. Do not publish or display city
 marker points; place data remains an internal classification source.
 
 Use the same GeoNames dump schema in every country. A naming unit population
@@ -42,10 +45,10 @@ If neither GeoNames recovery produces a positive value, use the configured
 WorldPop UN-adjusted 1 km raster zonal sum for the naming-unit polygon. Store
 the WorldPop DOI as `population_source_id`; never insert a manual country value.
 
-Allocate game population separately: WorldPop provides tile weights and the
-configured UN WPP medium-variant total provides the exact national sum. Use
-largest remainder for integer allocation. Classify each tile as `city` at
-100,000 and `metropolis` at 1,000,000 from that single value.
+Allocate game population separately: a represented real city's anchor receives
+its GeoNames population. WorldPop weights and largest remainder distribute the
+remaining national population across non-anchor tiles so the configured UN WPP
+medium-variant national sum remains exact. Store only this one population value.
 
 Use exactly four tile fill classes: `admin`, `city`, `metropolis`, and
 `capital`. All ordinary administrative tiles share one fill color. Make

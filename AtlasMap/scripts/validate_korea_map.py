@@ -449,6 +449,7 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         )
         required_population_fields = {
             "population", "population_year", "population_method", "population_source_id",
+            "is_initial_city", "city_upgrade_eligible",
         }
         missing_population_fields = sorted(
             required_population_fields - set(layer.fields().names())
@@ -468,14 +469,23 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             f"legacy={legacy_population_fields}",
         )
         population_year = int(settings["population_model"]["national_totals_year"])
-        population_method = str(settings["population_model"]["allocation_method"])
-        population_source_id = str(settings["population_model"]["source_id"])
+        residual_method = str(settings["population_model"]["allocation_method"])
+        anchor_method = str(settings["population_model"]["initial_city_method"])
         invalid_tile_populations = [
             str(tile["tile_id"]) for tile in features
             if int(tile["population"] or 0) < 0
             or int(tile["population_year"] or 0) != population_year
-            or str(tile["population_method"] or "") != population_method
-            or str(tile["population_source_id"] or "") != population_source_id
+            or str(tile["population_method"] or "") not in {residual_method, anchor_method}
+            or not str(tile["population_source_id"] or "")
+            or (
+                str(tile["population_method"] or "") == residual_method
+                and str(tile["population_source_id"] or "")
+                != str(settings["population_model"]["source_id"])
+            )
+            or (
+                str(tile["population_method"] or "") == anchor_method
+                and not str(tile["population_source_id"] or "").isdigit()
+            )
         ]
         check(
             "Tile populations are non-negative integers with provenance",
@@ -519,9 +529,14 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             tile_id = str(tile["tile_id"])
             map_class = str(tile["map_class"] or "")
             population = int(tile["population"] or 0)
+            is_initial_city = bool(tile["is_initial_city"])
             expected_city_class = (
                 "metropolis" if population >= metropolis_min
-                else "city" if population >= city_min else ""
+                else "city"
+            ) if is_initial_city else ""
+            expected_upgrade_eligible = (
+                not is_initial_city and not bool(tile["is_capital"])
+                and population >= city_min
             )
             expected_map_class = (
                 "capital" if bool(tile["is_capital"])
@@ -531,6 +546,11 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             if (
                 str(tile["city_class"] or "") != expected_city_class
                 or map_class != expected_map_class
+                or bool(tile["city_upgrade_eligible"]) != expected_upgrade_eligible
+                or (
+                    is_initial_city
+                    != (str(tile["population_method"] or "") == anchor_method)
+                )
                 or (
                     expected_named
                     and str(tile["tile_name_ko"] or "") != str(tile["city_name_ko"] or "")
@@ -538,7 +558,7 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
                 or (not expected_named and str(tile["city_name_ko"] or ""))
             ):
                 tile_city_mismatches.append(tile_id)
-        check("City class follows each tile's single population", not tile_city_mismatches,
+        check("Initial city anchors and player upgrade eligibility are consistent", not tile_city_mismatches,
               f"mismatches={tile_city_mismatches}")
         actual_map_classes = {str(tile["map_class"] or "") for tile in features}
         expected_map_classes = {"admin", "city", "metropolis", "capital"}

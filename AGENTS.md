@@ -206,6 +206,9 @@ city_name_ko
 city_name_en
 city_class
 is_capital
+is_initial_city
+city_upgrade_eligible
+map_class
 district_slots
 district_1
 district_2
@@ -217,12 +220,16 @@ manual_override
 ```
 
 Do not publish a city-marker layer. Every game tile stores exactly one integer
-population. Apply the global city classification directly to that tile value:
+population. Initial scenario city status is anchored to a qualifying real
+GeoNames city, not automatically inferred from every dense tile:
 
-- non-city: under 100,000 population, 1 district slot
-- city: 100,000 to under 1,000,000, 2 district slots
-- metropolis: 1,000,000 or more, 3 district slots
+- initial city: real city population from 100,000 to under 1,000,000, 2 district slots
+- initial metropolis: real city population of 1,000,000 or more, 3 district slots
+- ordinary tile: 1 district slot, even when its starting population exceeds 100,000
 - capital status is separate and adds no slot
+
+After scenario start, reaching 100,000 only makes an ordinary tile eligible for
+player-selected city promotion; it does not automatically change the tile type.
 
 Use the same GeoNames dump fields and recovery order for every country. Treat
 only positive integers as valid population. If an ADM2 population is zero,
@@ -235,10 +242,14 @@ WorldPop UN-adjusted 1 km raster and store its DOI as `population_source_id`.
 These naming-unit populations are internal name-allocation evidence, not game
 tile population. Do not publish `tile_name_population` on `korea_tiles`.
 
-For game population, use each country's WorldPop raster only as spatial
-weights. Scale those weights to the configured same-year UN World Population
-Prospects medium-variant national total, allocate integer residents by largest
-remainder, and validate that each country's tile sum matches exactly.
+For game population, give each represented qualifying real city one anchor tile
+whose single population equals its GeoNames city population. Subtract all city
+anchors from the configured same-year UN World Population Prospects
+medium-variant national total, distribute the residual over non-anchor tiles
+using WorldPop spatial weights and largest remainder, and validate that each
+country's tile sum matches exactly. At a finite grid resolution, a qualifying
+city without a distinct compatible tile remains source evidence rather than an
+initial city.
 
 Administrative ownership and city type are independent dimensions. A city tile
 inside a province keeps that province's `admin1_code`; for example, Yongin is a
@@ -251,9 +262,11 @@ city/county must belong to the tile's `admin1_code`. Assign every tile first to
 the highest-population overlapping same-owner unit. A duplicated unit keeps its
 largest-overlap representative; redistribute its other tiles to currently
 unrepresented same-owner units in population order, each choosing its
-largest-overlap vacancy. Any positive overlap is eligible. Derive city and
-metropolis fill solely from the tile's one game-population value. Capital status
-follows the final name and overrides fill color only.
+largest-overlap vacancy. Any positive overlap is eligible. Reserve compatible
+representative tiles for as many qualifying real cities as the grid permits.
+Derive initial city/metropolis fill from the anchored real-city population;
+ordinary dense tiles remain `admin` and expose promotion eligibility separately.
+Capital status follows the final name and overrides fill color only.
 
 ## QGIS Project and Outputs
 

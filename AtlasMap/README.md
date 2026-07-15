@@ -21,7 +21,7 @@ are advisory report values.
 
 Administrative ownership and city type are independent. For example, a tile
 containing Yongin remains owned by Gyeonggi (`admin1_code=KR-41`) while its
-population-based `city_class` can be `metropolis`. City status changes fill
+real-city anchor can have a separate `city_class`. City status changes fill
 color, never administrative borders.
 
 Tile display names must belong to the tile's administrative owner. Every tile
@@ -35,14 +35,15 @@ When a capital naming unit occupies multiple tiles, all tiles carrying that
 capital name use the capital fill rather than only one representative tile.
 
 The map uses exactly four tile fill classes: ordinary administrative tile,
-light-blue city (100,000-999,999), dark-navy metropolis (1,000,000+), and
-gold capital. Each tile stores exactly one integer population. The 2020
-WorldPop raster supplies spatial weights, which are scaled to the configured
-2026 UN World Population Prospects national total and reconciled with the
-largest-remainder method. Consequently, every country's tile populations sum
-to its UN WPP total exactly. A tile is a city at 100,000 residents and a
-metropolis at 1,000,000 residents, regardless of its display name. Capital fill
-overrides the population color without changing the stored population.
+light-blue city, dark-navy metropolis, and gold capital. Each represented real
+city receives one anchor tile: 100,000-999,999 is an initial city and 1,000,000+
+is an initial metropolis. Its one game-population value is the GeoNames city
+population. The 2020 WorldPop raster distributes the remaining population over
+non-anchor tiles, and largest remainder reconciles the result to the configured
+2026 UN World Population Prospects national total exactly. An ordinary tile
+over 100,000 stays administrative at scenario start and is instead marked
+`city_upgrade_eligible`; promotion during play is the player's choice. Capital
+fill overrides the city color without changing the stored population.
 
 GeoNames and naming-unit WorldPop sums remain internal inputs for selecting
 display names. They are not alternative game-population fields.

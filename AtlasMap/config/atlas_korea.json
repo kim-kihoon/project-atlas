@@ -79,7 +79,9 @@
     "national_totals_year": 2026,
     "national_totals_units": "thousands",
     "source_id": "WPP2024",
-    "allocation_method": "worldpop_spatial_weights_scaled_to_un_wpp_total_largest_remainder"
+    "allocation_method": "worldpop_residual_reconciled_to_un_wpp_total_largest_remainder",
+    "initial_city_method": "geonames_city_anchor",
+    "promotion_policy": "initial_real_cities_only_then_player_choice_after_population_threshold"
   },
   "population_fallback": {
     "path": "data/source/kor_ppp_2020_1km_Aggregated_UNadj.tif",

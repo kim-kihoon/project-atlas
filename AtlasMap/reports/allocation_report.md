@@ -1,6 +1,6 @@
 # Atlas Korean Peninsula tile allocation report
 
-Generated: 2026-07-15T10:37:09.779509+00:00
+Generated: 2026-07-15T11:48:08.592704+00:00
 
 - Orientation: `pointy_top`
 - Final tiles: **364**
@@ -60,22 +60,25 @@ Generated: 2026-07-15T10:37:09.779509+00:00
 - Redistribution: unrepresented units take compatible vacancies in population order
 - Candidate threshold: any positive overlap; no minimum share
 - Naming units: 337
-- Uniquely represented units: 274
-- Positive-overlap representatives below the legacy 5% reporting threshold: 20
-- Dominant-overlap fill tiles: 69
-- Population-redistribution fill tiles: 20
+- Uniquely represented units: 275
+- Positive-overlap representatives below the legacy 5% reporting threshold: 25
+- Dominant-overlap fill tiles: 71
+- Population-redistribution fill tiles: 17
 - Same-owner nearest-boundary fallbacks: 1
 
-## Population-based city classes
+## Initial cities and game population
 
-Each game tile stores one integer population. City class is derived only from that value.
-WorldPop supplies spatial weights; UN WPP supplies the exact national total.
+Each real city receives one representative anchor tile with its GeoNames city population.
+WorldPop distributes the residual population; UN WPP fixes the exact national total.
+Non-city tiles over 100,000 residents are upgrade-eligible, not automatically cities.
 
 - Capital tiles: 5
-- Metropolis tiles: 10
-- City tiles: 112
-- KOR: tile sum 51,600,388; UN WPP target 51,600,388; raw WorldPop weight sum 48,096,891.39
-- PRK: tile sum 26,633,691; UN WPP target 26,633,691; raw WorldPop weight sum 23,934,747.80
+- Metropolis tiles: 8
+- City tiles: 76
+- Player city-upgrade eligible tiles: 66
+- Qualifying real cities without a distinct tile at this resolution: 10
+- KOR: tile sum 51,600,388; UN WPP target 51,600,388; raw WorldPop weight sum 7,507,167.09
+- PRK: tile sum 26,633,691; UN WPP target 26,633,691; raw WorldPop weight sum 15,193,533.37
 
 Naming-unit populations remain internal allocation evidence only:
 - GeoNames ADM2 populations: 147
