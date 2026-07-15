@@ -21,3 +21,8 @@ most one representative tile with population priority and overlap preference,
 then fill remaining tiles by largest same-owner overlap. Derive `city_class`
 and capital color from the final named unit. City marker points are reference
 data only and must not independently select or color a tile.
+
+Use exactly four tile fill classes: `admin`, `city`, `metropolis`, and
+`capital`. All ordinary administrative tiles share one fill color. Make
+admin-1 ownership legible through the `admin1_tile_borders` layer, whose lines
+must be substantially stronger than ordinary tile outlines.

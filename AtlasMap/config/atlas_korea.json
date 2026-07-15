@@ -65,6 +65,7 @@
     "city_population_min": 500000,
     "metropolis_population_min": 1000000,
     "colors": {
+      "admin": "#d9d9d9",
       "capital": "#f4c542",
       "metropolis": "#d73027",
       "city": "#3182bd"

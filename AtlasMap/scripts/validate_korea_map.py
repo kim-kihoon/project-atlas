@@ -321,10 +321,35 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
                     or str(tile["map_class"] or "") != expected_map_class
                 ):
                     tile_city_mismatches.append(tile_id)
-            elif str(tile["map_class"] or "") != str(tile["admin1_code"] or ""):
+            elif str(tile["map_class"] or "") != "admin":
                 tile_city_mismatches.append(tile_id)
         check("City class follows final same-owner tile name", not tile_city_mismatches,
               f"mismatches={tile_city_mismatches}")
+        actual_map_classes = {str(tile["map_class"] or "") for tile in features}
+        expected_map_classes = {"admin", "city", "metropolis", "capital"}
+        check(
+            "Exactly four tile color classes",
+            actual_map_classes == expected_map_classes,
+            f"actual={sorted(actual_map_classes)}",
+        )
+
+        border_layer = QgsVectorLayer(
+            f"{gpkg}|layername=admin1_tile_borders", "admin1_tile_borders", "ogr"
+        )
+        border_features = list(border_layer.getFeatures()) if border_layer.isValid() else []
+        invalid_borders = [
+            (str(border["tile_id_a"]), str(border["tile_id_b"]))
+            for border in border_features
+            if not str(border["admin_a"] or "")
+            or not str(border["admin_b"] or "")
+            or str(border["admin_a"]) == str(border["admin_b"])
+            or border.geometry().isEmpty()
+        ]
+        check(
+            "Admin borders separate different owners",
+            border_layer.isValid() and bool(border_features) and not invalid_borders,
+            f"segments={len(border_features)}, invalid={invalid_borders}",
+        )
 
         target_area = float(settings["grid"]["target_area_km2"])
         area_tolerance = float(validation["area_relative_tolerance"])

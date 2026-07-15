@@ -235,8 +235,10 @@ final named unit; city point markers never independently assign a tile.
 ## QGIS Project and Outputs
 
 - Save `Atlas_Korea.qgz` with relative data paths only.
-- Style final tiles distinctly by admin-1 area and visually distinguish normal
-  tile edges, admin borders, and coastal tiles.
+- Use exactly four tile fill classes: normal administrative tile, city,
+  metropolis, and capital. Do not use a different fill per admin-1 area;
+  distinguish admin-1 ownership with prominent shared-edge borders instead.
+  Keep normal tile edges, admin borders, and coastal outlines visually distinct.
 - Label each admin-1 area with its name and assigned tile count.
 - Show `tile_id` labels only at an appropriate zoom scale.
 - Put real source boundaries in a separate toggleable validation group so they

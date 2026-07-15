@@ -899,7 +899,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 "city_name_ko": city["name_ko"] if city else None,
                 "city_name_en": city["name_en"] if city else None,
                 "city_class": city_class, "is_capital": is_capital,
-                "map_class": "capital" if is_capital else city_class or code,
+                "map_class": "capital" if is_capital else city_class or "admin",
                 "tile_name_code": naming_code,
                 "tile_name_ko": naming_unit["name_ko"],
                 "tile_name_en": naming_unit["name_en"],
@@ -1050,18 +1050,15 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         categories = []
         class_colors = settings["city_classification"]["colors"]
         for value, label in (
-            ("capital", "수도"), ("metropolis", "인구 100만 이상"),
-            ("city", "인구 50만 이상 100만 미만"),
+            ("admin", "일반 행정구역"),
+            ("city", "도시 · 인구 50만 이상 100만 미만"),
+            ("metropolis", "대도시 · 인구 100만 이상"),
+            ("capital", "수도"),
         ):
             symbol = QgsFillSymbol.createSimple(
-                {"color": class_colors[value], "outline_color": "#36454f", "outline_width": "0.35"}
+                {"color": class_colors[value], "outline_color": "#6b737b", "outline_width": "0.25"}
             )
             categories.append(QgsRendererCategory(value, symbol, label))
-        for admin in admins:
-            symbol = QgsFillSymbol.createSimple(
-                {"color": admin["color"], "outline_color": "#36454f", "outline_width": "0.35"}
-            )
-            categories.append(QgsRendererCategory(admin["code"], symbol, admin["name_ko"]))
         persisted_tiles.setRenderer(QgsCategorizedSymbolRenderer("map_class", categories))
         label_settings = QgsPalLayerSettings()
         label_settings.fieldName = (
@@ -1111,7 +1108,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         )
         persisted_borders.setRenderer(
             QgsSingleSymbolRenderer(
-                QgsLineSymbol.createSimple({"line_color": "#202020", "line_width": "1.1"})
+                QgsLineSymbol.createSimple({"line_color": "#111111", "line_width": "2.2"})
             )
         )
         persisted_coast.setRenderer(

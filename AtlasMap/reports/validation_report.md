@@ -1,6 +1,6 @@
 # Atlas Korea validation report
 
-Generated: 2026-07-15T00:20:55.474870+00:00
+Generated: 2026-07-15T00:25:31.676424+00:00
 
 Overall result: **PASS**
 
@@ -29,6 +29,8 @@ Overall result: **PASS**
 | City markers link to same-name owner tiles | PASS | invalid=[] |
 | Exactly one capital tile | PASS | tiles=1, markers=1 |
 | City class follows final same-owner tile name | PASS | mismatches=[] |
+| Exactly four tile color classes | PASS | actual=['admin', 'capital', 'city', 'metropolis'] |
+| Admin borders separate different owners | PASS | segments=71, invalid=[] |
 | Valid geometries | PASS | invalid=[] |
 | Complete regular hexagons | PASS | invalid=[] |
 | Hex target area | PASS | outside_tolerance=[] |
