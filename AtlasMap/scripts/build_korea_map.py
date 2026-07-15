@@ -1107,7 +1107,10 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         city_text.setBuffer(city_buffer)
         city_labels.setFormat(city_text)
         persisted_cities.setLabeling(QgsVectorLayerSimpleLabeling(city_labels))
-        persisted_cities.setLabelsEnabled(True)
+        # A tile has exactly one visible city/county name: tile_name_ko.
+        # City markers remain available for population classification and
+        # inspection, but their labels would create a second name on the tile.
+        persisted_cities.setLabelsEnabled(False)
         persisted_naming.setRenderer(
             QgsSingleSymbolRenderer(
                 QgsFillSymbol.createSimple(
