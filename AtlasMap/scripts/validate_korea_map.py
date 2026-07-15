@@ -210,7 +210,8 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
 
         required_naming_fields = {
             "tile_name_code", "tile_name_ko", "tile_name_en", "tile_name_method",
-            "tile_name_population", "tile_name_overlap_km2", "map_class",
+            "tile_name_population", "tile_name_population_method",
+            "tile_name_overlap_km2", "map_class",
         }
         missing_naming_fields = sorted(required_naming_fields - set(layer.fields().names()))
         check("Tile naming fields", not missing_naming_fields, f"missing={missing_naming_fields}")
@@ -242,6 +243,39 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         }
         check("Naming reference layer", naming_layer.isValid() and bool(naming_features),
               f"units={len(naming_features)}")
+        allowed_population_methods = {
+            "geonames_adm2", "geonames_populated_place",
+            "geonames_populated_place_same_admin2",
+            "geonames_populated_place_same_name",
+            "worldpop_un_adjusted_zonal_sum", "unknown",
+        }
+        invalid_populations = []
+        unresolved_populations = []
+        for unit in naming_features:
+            known = bool(unit["population_known"])
+            population = int(unit["population"] or 0)
+            method = str(unit["population_method"] or "")
+            source_id = str(unit["population_source_id"] or "")
+            if not known:
+                unresolved_populations.append(str(unit["unit_code"]))
+            if (
+                method not in allowed_population_methods
+                or (known and (population <= 0 or method == "unknown" or not source_id))
+                or (not known and population != 0)
+            ):
+                invalid_populations.append(
+                    (str(unit["unit_code"]), population, known, method)
+                )
+        check(
+            "Population values are positive integers with provenance",
+            not invalid_populations,
+            f"invalid={invalid_populations}",
+        )
+        check(
+            "All naming-unit populations are resolved",
+            not unresolved_populations,
+            f"unresolved={unresolved_populations}",
+        )
         ownership_name_mismatches = []
         for tile in features:
             unit = naming_by_code.get(str(tile["tile_name_code"] or ""))
@@ -305,6 +339,11 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
               f"layer_valid={city_layer.isValid()}")
         city_min = int(settings["city_classification"]["city_population_min"])
         metropolis_min = int(settings["city_classification"]["metropolis_population_min"])
+        check(
+            "Global city-source and classification thresholds agree",
+            city_min == int(settings["city_source"]["minimum_population"]) == 100000,
+            f"city={city_min}, source={settings['city_source']['minimum_population']}",
+        )
         capital_tiles = [tile for tile in features if str(tile["map_class"] or "") == "capital"]
         check(
             "Exactly one capital tile",

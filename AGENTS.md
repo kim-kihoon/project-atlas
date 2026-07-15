@@ -214,10 +214,19 @@ manual_override
 Do not publish a city-marker layer. Apply the global city classification to the
 final named tile only when trustworthy population data exists:
 
-- non-city: under 500,000 population, 1 district slot
-- city: 500,000 to under 1,000,000, 2 district slots
+- non-city: under 100,000 population, 1 district slot
+- city: 100,000 to under 1,000,000, 2 district slots
 - metropolis: 1,000,000 or more, 3 district slots
 - capital status is separate and adds no slot
+
+Use the same GeoNames dump fields and recovery order for every country. Treat
+only positive integers as valid population. If an ADM2 population is zero,
+negative, or invalid, recover it from the largest positive populated-place
+record with the same admin-2 code; if unavailable, use the same normalized name
+within the same admin-1 owner. Persist the recovery method and GeoNames ID so
+every correction is auditable. Do not add country-specific population patches.
+If both GeoNames matches fail, calculate a zonal sum from the configured
+WorldPop UN-adjusted 1 km raster and store its DOI as `population_source_id`.
 
 Administrative ownership and city type are independent dimensions. A city tile
 inside a province keeps that province's `admin1_code`; for example, Yongin is a

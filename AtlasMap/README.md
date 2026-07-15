@@ -26,8 +26,14 @@ no minimum overlap threshold. City class and
 capital color follow the final tile name, not an independently located point.
 
 The map uses exactly four tile fill classes: ordinary administrative tile,
-light-blue city (500,000-999,999), dark-navy metropolis (1,000,000+), and
-gold capital. Ordinary tiles do not receive separate province colors.
+light-blue city (100,000-999,999), dark-navy metropolis (1,000,000+), and
+gold capital. Ordinary tiles do not receive separate province colors. Population
+comes from the globally uniform GeoNames dump. A non-positive ADM2 population
+is automatically repaired from the largest positive populated-place record
+with the same admin-2 code, then by the same normalized name; the chosen method
+and source identifier are retained for audit. If GeoNames still has no positive
+value, the final fallback is a zonal sum from the globally consistent 2020
+WorldPop 1 km UN-adjusted population raster.
 Administrative borders are the complete topology-derived outlines of same-owner
 tile groups. Every hex edge is keyed explicitly: edges shared by tiles with the
 same `admin1_code` cancel, while different-owner and exterior edges remain and

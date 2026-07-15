@@ -1,6 +1,6 @@
 # Atlas Korea tile allocation report
 
-Generated: 2026-07-15T02:00:35.152430+00:00
+Generated: 2026-07-15T02:19:39.001253+00:00
 
 - Orientation: `pointy_top`
 - Final tiles: **160**
@@ -48,9 +48,9 @@ Generated: 2026-07-15T02:00:35.152430+00:00
 - Redistribution: unrepresented units take compatible vacancies in population order
 - Candidate threshold: any positive overlap; no minimum share
 - Naming units: 161
-- Uniquely represented units: 129
-- Positive-overlap representatives below the legacy 5% reporting threshold: 9
-- Dominant-overlap fill tiles: 22
+- Uniquely represented units: 130
+- Positive-overlap representatives below the legacy 5% reporting threshold: 10
+- Dominant-overlap fill tiles: 21
 - Population-redistribution fill tiles: 8
 - Same-owner nearest-boundary fallbacks: 1
 
@@ -58,11 +58,14 @@ Generated: 2026-07-15T02:00:35.152430+00:00
 
 City class changes tile fill only; no city-marker layer is published.
 
-- Qualifying metropolis source records: 11
-- Qualifying city source records: 12
+- Qualifying metropolis naming units: 11
+- Qualifying city naming units: 65
 - Capital tiles: 1
 - Metropolis tiles: 10
-- City tiles: 10
+- City tiles: 60
+- GeoNames ADM2 populations: 146
+- GeoNames populated-place recoveries: 14
+- WorldPop zonal recoveries: 1
 
 ## Boundary tiles
 

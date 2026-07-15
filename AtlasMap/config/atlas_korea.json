@@ -17,7 +17,7 @@
     "member": "KR.txt",
     "provider": "GeoNames",
     "country_code": "KR",
-    "minimum_population": 500000,
+    "minimum_population": 100000,
     "capital_geoname_id": "1835848",
     "canonical_aliases": {"kimhae": "gimhae"},
     "names_ko": {
@@ -62,7 +62,7 @@
     }
   },
   "city_classification": {
-    "city_population_min": 500000,
+    "city_population_min": 100000,
     "metropolis_population_min": 1000000,
     "colors": {
       "admin": "#d9d9d9",
@@ -70,6 +70,13 @@
       "metropolis": "#173f6f",
       "city": "#4aa3d8"
     }
+  },
+  "population_fallback": {
+    "path": "data/source/kor_ppp_2020_1km_Aggregated_UNadj.tif",
+    "provider": "WorldPop",
+    "year": 2020,
+    "source_id": "10.5258/SOTON/WP00671",
+    "policy": "un_adjusted_1km_zonal_sum_for_unresolved_units_only"
   },
   "grid": {
     "orientation": "pointy_top",

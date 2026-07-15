@@ -28,15 +28,33 @@ filtered, repaired, and reprojected layers belong in
 - Original archive: `KR.zip`
 - SHA-256: `39a040976726f385f61d70dacf6f3d6c0793fe3bfe13545bc459efdf482be08a`
 - Archive member used: `KR.txt`
-- Selection: population at least 500,000 and either feature class `P`, or an
+- Selection: population at least 100,000 and either feature class `P`, or an
   `ADM2` feature whose ASCII name ends in `-si`; duplicate city names are
   collapsed using the highest recorded population.
-- Population meaning: GeoNames' recorded population value; it is used for map
-  classification and is not claimed to be a synchronized Korean census value.
+- Population meaning: GeoNames' positive recorded population value is primary.
+  Invalid ADM2 values are recovered by shared admin-2 code, then normalized
+  name, before the WorldPop raster fallback described below.
 - License: GeoNames data is provided under Creative Commons Attribution 4.0.
 - Download reference archive retained during source evaluation:
   `cities500.zip`, SHA-256
   `28b72bbe2a9e010de46cc4f34121f2dd0f6b5c9f0829d71242d8f1a64e0c496e`.
+
+## WorldPop Republic of Korea population grid
+
+- Provider: WorldPop, University of Southampton
+- Dataset: South Korea 2020 unconstrained population count, 1 km, UN-adjusted
+- URL: https://hub.worldpop.org/geodata/summary?id=37084
+- Direct file: https://data.worldpop.org/GIS/Population/Global_2000_2020_1km_UNadj/2020/KOR/kor_ppp_2020_1km_Aggregated_UNadj.tif
+- DOI: `10.5258/SOTON/WP00671`
+- Downloaded: 2026-07-15 (Asia/Seoul)
+- Original file: `kor_ppp_2020_1km_Aggregated_UNadj.tif`
+- SHA-256: `9c8b0d1609d7a1c03d8eb156b6747c5da9e8e1afd73356e46cb3fe1f28349d30`
+- Units: estimated people per raster cell, with national total adjusted to the
+  UN Population Division estimate.
+- Use: final country-neutral fallback only when GeoNames has no positive ADM2
+  or matching populated-place population. Population is calculated by zonal
+  sum within the naming-unit polygon.
+- License: Creative Commons Attribution 4.0.
 
 ## geoBoundaries Republic of Korea ADM2
 
