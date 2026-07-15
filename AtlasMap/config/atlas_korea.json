@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "display_language": "en",
   "country": {
     "iso3": "KOR",
     "name_ko": "대한민국",

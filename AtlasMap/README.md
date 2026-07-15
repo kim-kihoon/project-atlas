@@ -5,6 +5,8 @@ prototype map used by **Atlas**. It builds the Republic of Korea and the
 Democratic People's Republic of Korea together on one common regular-hex grid
 in EPSG:5179. Each tile goes first to its dominant country-or-ocean overlap,
 then only to a first-level administrative area belonging to that same country.
+The QGIS display language is controlled by `display_language`; it is currently
+set to English so every tile and Admin-1 label uses one language consistently.
 
 There is no fixed national tile count. A tile belongs to KOR or PRK only when
 that country's land occupies more of it than every neighboring country and the

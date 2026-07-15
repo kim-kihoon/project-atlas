@@ -138,6 +138,13 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             if not passed:
                 failures.append(f"{name}: {detail}")
 
+        display_language = str(settings.get("display_language", ""))
+        check(
+            "Display language is configured",
+            display_language in {"en", "ko"},
+            f"display_language={display_language}",
+        )
+
         check("GeoPackage layer loads", layer.isValid(), str(gpkg))
         if not layer.isValid():
             report_path.write_text("# Validation failed\n\nGeoPackage layer does not load.\n", encoding="utf-8")
@@ -613,6 +620,7 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         ]
         path_hits = []
         border_above_tiles = False
+        display_labels_match = False
         files_to_scan = sorted((root / "scripts").glob("*"))
         for path in files_to_scan:
             if not path.is_file():
@@ -633,10 +641,19 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
                         border_position >= 0 and tile_position >= 0
                         and border_position < tile_position
                     )
+                    display_labels_match = (
+                        f"tile_name_{display_language}" in text
+                        and f"admin1_name_{display_language}" in text
+                    )
                     for line_number, line in enumerate(text.splitlines(), 1):
                         if any(pattern.search(line) for pattern in absolute_patterns):
                             path_hits.append(f"{project_path.name}:{line_number}")
         check("Relative shared paths", not path_hits, f"absolute_path_hits={path_hits}")
+        check(
+            "QGIS labels use the configured language",
+            display_labels_match,
+            f"display_language={display_language}",
+        )
         check(
             "Admin border layer renders above tile fills",
             border_above_tiles,

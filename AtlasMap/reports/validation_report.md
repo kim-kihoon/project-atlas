@@ -1,11 +1,12 @@
 # Atlas Korean Peninsula validation report
 
-Generated: 2026-07-15T02:49:54.715851+00:00
+Generated: 2026-07-15T02:56:16.236776+00:00
 
 Overall result: **PASS**
 
 | Check | Result | Detail |
 | --- | --- | --- |
+| Display language is configured | PASS | display_language=en |
 | GeoPackage layer loads | PASS | /Users/kimkihoon/Desktop/my-projects/atlas/AtlasMap/data/processed/Atlas_Korea.gpkg |
 | CRS | PASS | EPSG:5179 |
 | Final country codes | PASS | wrong_country=[] |
@@ -46,6 +47,7 @@ Overall result: **PASS**
 | Neighbor IDs exist | PASS | missing=[] |
 | Neighbor symmetry | PASS | asymmetric=[] |
 | Relative shared paths | PASS | absolute_path_hits=[] |
+| QGIS labels use the configured language | PASS | display_language=en |
 | Admin border layer renders above tile fills | PASS | border_above_tiles=True |
 
 ## Allocation

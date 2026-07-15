@@ -727,6 +727,12 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             raise QgsProcessingException(f"Config does not exist: {config_path}")
         root = config_path.parent.parent.resolve()
         settings = json.loads(config_path.read_text(encoding="utf-8"))
+        display_language = settings.get("display_language", "en")
+        if display_language not in {"en", "ko"}:
+            raise QgsProcessingException(
+                f"Unsupported display_language: {display_language}"
+            )
+        display_suffix = "en" if display_language == "en" else "ko"
         country_settings = configured_countries(settings)
         admins = [admin for item in country_settings for admin in item["admin1"]]
         admin_by_code = {admin["code"]: admin for admin in admins}
@@ -1305,12 +1311,22 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
 
         categories = []
         class_colors = settings["city_classification"]["colors"]
-        for value, label in (
-            ("admin", "일반 행정구역"),
-            ("city", "도시 · 인구 10만 이상 100만 미만"),
-            ("metropolis", "대도시 · 인구 100만 이상"),
-            ("capital", "수도"),
-        ):
+        category_labels = {
+            "en": {
+                "admin": "Administrative tile",
+                "city": "City · population 100,000–999,999",
+                "metropolis": "Metropolis · population 1,000,000+",
+                "capital": "Capital",
+            },
+            "ko": {
+                "admin": "일반 행정구역",
+                "city": "도시 · 인구 10만 이상 100만 미만",
+                "metropolis": "대도시 · 인구 100만 이상",
+                "capital": "수도",
+            },
+        }
+        for value in ("admin", "city", "metropolis", "capital"):
+            label = category_labels[display_language][value]
             symbol = QgsFillSymbol.createSimple(
                 {"color": class_colors[value], "outline_color": "#6b737b", "outline_width": "0.25"}
             )
@@ -1318,7 +1334,8 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         persisted_tiles.setRenderer(QgsCategorizedSymbolRenderer("map_class", categories))
         label_settings = QgsPalLayerSettings()
         label_settings.fieldName = (
-            "tile_name_ko || CASE WHEN @map_scale < 350000 THEN '\\n' || tile_id ELSE '' END"
+            f"tile_name_{display_suffix} || CASE WHEN @map_scale < 350000 "
+            "THEN '\\n' || tile_id ELSE '' END"
         )
         label_settings.isExpression = True
         label_settings.scaleVisibility = True
@@ -1340,7 +1357,9 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         )
         persisted_admin.setRenderer(QgsSingleSymbolRenderer(admin_symbol))
         admin_labels = QgsPalLayerSettings()
-        admin_labels.fieldName = "admin1_name_ko || ' (' || tile_count || ')'"
+        admin_labels.fieldName = (
+            f"admin1_name_{display_suffix} || ' (' || tile_count || ')'"
+        )
         admin_labels.isExpression = True
         admin_text = QgsTextFormat()
         admin_text.setSize(10)
