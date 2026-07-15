@@ -38,6 +38,7 @@ from qgis.core import (
     QgsProperty,
     QgsRectangle,
     QgsRendererCategory,
+    QgsSimpleLineSymbolLayer,
     QgsSingleSymbolRenderer,
     QgsTextBufferSettings,
     QgsTextFormat,
@@ -1106,11 +1107,21 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 )
             )
         )
-        persisted_borders.setRenderer(
-            QgsSingleSymbolRenderer(
-                QgsLineSymbol.createSimple({"line_color": "#111111", "line_width": "2.2"})
+        border_symbol = QgsLineSymbol.createSimple(
+            {
+                "line_color": "#f7f7f7", "line_width": "1.8",
+                "capstyle": "round", "joinstyle": "round",
+            }
+        )
+        border_symbol.appendSymbolLayer(
+            QgsSimpleLineSymbolLayer.create(
+                {
+                    "line_color": "#151515", "line_width": "0.9",
+                    "capstyle": "round", "joinstyle": "round",
+                }
             )
         )
+        persisted_borders.setRenderer(QgsSingleSymbolRenderer(border_symbol))
         persisted_coast.setRenderer(
             QgsSingleSymbolRenderer(
                 QgsLineSymbol.createSimple(
@@ -1167,11 +1178,11 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         project.addMapLayer(persisted_admin_labels, False)
         project.addMapLayer(persisted_borders, False)
         project.addMapLayer(persisted_coast, False)
-        game_group.addLayer(persisted_tiles)
-        game_group.addLayer(persisted_cities)
         game_group.addLayer(persisted_admin_labels)
+        game_group.addLayer(persisted_cities)
         game_group.addLayer(persisted_borders)
         game_group.addLayer(persisted_coast)
+        game_group.addLayer(persisted_tiles)
         project.addMapLayer(persisted_admin, False)
         project.addMapLayer(persisted_candidates, False)
         project.addMapLayer(persisted_naming, False)

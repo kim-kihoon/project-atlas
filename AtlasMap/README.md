@@ -25,9 +25,11 @@ Remaining tiles use their largest-overlap same-owner unit. City class and
 capital color follow the final tile name, not an independently located point.
 
 The map uses exactly four tile fill classes: ordinary administrative tile,
-city (500,000-999,999), metropolis (1,000,000+), and capital. Ordinary tiles do
+light-blue city (500,000-999,999), dark-navy metropolis (1,000,000+), and
+gold capital. Ordinary tiles do
 not receive separate province colors. Thick dark lines between tiles with
-different `admin1_code` values carry the administrative-boundary information;
+different `admin1_code` values carry the administrative-boundary information.
+Those lines use a light casing plus a dark core and render above tile fills;
 thin tile outlines and dashed coastal outlines remain separate visual layers.
 
 ## Quick start (macOS)

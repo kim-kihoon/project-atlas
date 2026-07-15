@@ -332,6 +332,19 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             actual_map_classes == expected_map_classes,
             f"actual={sorted(actual_map_classes)}",
         )
+        colors = settings["city_classification"]["colors"]
+
+        def relative_luminance(hex_color):
+            values = [int(hex_color.lstrip("#")[i:i + 2], 16) / 255.0 for i in (0, 2, 4)]
+            linear = [value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
+                      for value in values]
+            return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+        check(
+            "Metropolis fill darker than city fill",
+            relative_luminance(colors["metropolis"]) < relative_luminance(colors["city"]),
+            f"city={colors['city']}, metropolis={colors['metropolis']}",
+        )
 
         border_layer = QgsVectorLayer(
             f"{gpkg}|layername=admin1_tile_borders", "admin1_tile_borders", "ogr"
@@ -419,6 +432,7 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             re.compile(r"(?<![A-Za-z])[A-Za-z]:[\\/](?![\\/])[^\s<]+"),
         ]
         path_hits = []
+        border_above_tiles = False
         files_to_scan = sorted((root / "scripts").glob("*"))
         for path in files_to_scan:
             if not path.is_file():
@@ -433,10 +447,21 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
                     if not member.endswith(".qgs"):
                         continue
                     text = archive.read(member).decode("utf-8", errors="replace")
+                    border_position = text.find('name="Game admin borders"')
+                    tile_position = text.find('name="Korea game tiles"')
+                    border_above_tiles = (
+                        border_position >= 0 and tile_position >= 0
+                        and border_position < tile_position
+                    )
                     for line_number, line in enumerate(text.splitlines(), 1):
                         if any(pattern.search(line) for pattern in absolute_patterns):
                             path_hits.append(f"{project_path.name}:{line_number}")
         check("Relative shared paths", not path_hits, f"absolute_path_hits={path_hits}")
+        check(
+            "Admin border layer renders above tile fills",
+            border_above_tiles,
+            f"border_above_tiles={border_above_tiles}",
+        )
 
         lines = [
             "# Atlas Korea validation report", "",
