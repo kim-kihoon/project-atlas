@@ -1,6 +1,6 @@
 # Atlas Korean Peninsula validation report
 
-Generated: 2026-07-15T12:07:52.233165+00:00
+Generated: 2026-07-15T12:15:30.207257+00:00
 
 Overall result: **PASS**
 
@@ -38,11 +38,13 @@ Overall result: **PASS**
 | Tile populations are non-negative integers with provenance | PASS | invalid=[] |
 | Tile populations exactly reconcile to UN WPP national totals | PASS | mismatches={} |
 | Every country has capital tiles | PASS | countries={'KOR': 1, 'PRK': 4} |
-| Every tile named for a capital uses the capital class | PASS | invalid=[] |
+| Every tile named for a capital is marked as capital | PASS | invalid=[] |
 | Initial city anchors and player upgrade eligibility are consistent | PASS | mismatches=[] |
-| Exactly four tile color classes | PASS | actual=['admin', 'capital', 'city', 'metropolis'] |
+| Exactly three tile fill classes; capital is an outline | PASS | actual=['admin', 'city', 'metropolis'] |
 | Metropolis fill darker than city fill | PASS | city=#4aa3d8, metropolis=#173f6f |
+| Capital outline color is configured | PASS | capital_outline=#f4c542 |
 | Same-owner groups have complete topology-derived outlines | PASS | edges=526, invalid=[], topology=[], missing=[] |
+| Capital outlines follow the exterior of each capital tile group | PASS | edges=20, invalid=[], missing=[] |
 | Coastal line layer is intentionally absent | PASS | coastal_tile_outlines is not published during border development |
 | Valid geometries | PASS | invalid=[] |
 | Complete regular hexagons | PASS | invalid=[] |
@@ -54,6 +56,7 @@ Overall result: **PASS**
 | Relative shared paths | PASS | absolute_path_hits=[] |
 | QGIS labels use the configured language | PASS | display_language=en |
 | Admin border layer renders above tile fills | PASS | border_above_tiles=True |
+| Capital outline layer renders above tile fills | PASS | capital_outline_above_tiles=True |
 
 ## Allocation
 

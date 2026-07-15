@@ -67,9 +67,9 @@
     "metropolis_population_min": 1000000,
     "colors": {
       "admin": "#d9d9d9",
-      "capital": "#f4c542",
       "metropolis": "#173f6f",
-      "city": "#4aa3d8"
+      "city": "#4aa3d8",
+      "capital_outline": "#f4c542"
     }
   },
   "population_model": {

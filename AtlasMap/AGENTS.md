@@ -13,7 +13,7 @@ representation is mandatory. Never report completion unless build, validation,
 export, and preview generation all succeed.
 
 Keep administrative ownership (`admin1_code`) independent from population-based
-tile type (`city_class`, `is_capital`). City type may override fill color but
+tile type (`city_class`, `is_capital`). City type determines fill color but
 must never create city boundary lines; only differing admin ownership creates
 administrative borders.
 
@@ -55,8 +55,10 @@ its GeoNames population. WorldPop weights and largest remainder distribute the
 remaining national population across non-anchor tiles so the configured UN WPP
 medium-variant national sum remains exact. Store only this one population value.
 
-Use exactly four tile fill classes: `admin`, `city`, `metropolis`, and
-`capital`. All ordinary administrative tiles share one fill color. Make
+Use exactly three tile fill classes: `admin`, `city`, and `metropolis`.
+Capital is not a fill class: draw one yellow topology-derived outline around
+the complete group of tiles carrying each capital name. All ordinary
+administrative tiles share one fill color. Make
 admin-1 ownership legible through the `admin1_tile_borders` layer, whose lines
 must be substantially stronger than ordinary tile outlines.
 

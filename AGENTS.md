@@ -269,13 +269,15 @@ order without allowing a smaller city to evict a matched larger city. This
 priority never relaxes spatial overlap or Admin-1 ownership constraints.
 Derive initial city/metropolis fill from the anchored real-city population;
 ordinary dense tiles remain `admin` and expose promotion eligibility separately.
-Capital status follows the final name and overrides fill color only.
+Capital status follows the final name but never overrides fill. Draw a yellow
+outline only on the exterior edges of the complete same-capital tile group.
 
 ## QGIS Project and Outputs
 
 - Save `Atlas_Korea.qgz` with relative data paths only.
-- Use exactly four tile fill classes: normal administrative tile, city,
-  metropolis, and capital. Do not use a different fill per admin-1 area;
+- Use exactly three tile fill classes: normal administrative tile, city, and
+  metropolis. Show capitals with a yellow group outline, not a separate fill.
+  Do not use a different fill per admin-1 area;
   distinguish admin-1 ownership with complete topology-derived outlines of
   same-owner tile groups. Cancel every edge shared by same-owner tiles; retain
   different-owner and exterior edges exactly once. Never derive these outlines

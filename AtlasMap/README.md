@@ -36,10 +36,13 @@ actual-population order. Smaller cities cannot displace already matched larger
 cities, although spatial overlap and administrative ownership can leave a dense
 city without a distinct hex while an isolated smaller city keeps its local hex.
 When a capital naming unit occupies multiple tiles, all tiles carrying that
-capital name use the capital fill rather than only one representative tile.
+capital name retain their ordinary city/metropolis/admin fill. Their combined
+outer boundary receives one yellow capital outline; internal shared edges do
+not receive that outline.
 
-The map uses exactly four tile fill classes: ordinary administrative tile,
-light-blue city, dark-navy metropolis, and gold capital. Each represented real
+The map uses exactly three tile fill classes: ordinary administrative tile,
+light-blue city, and dark-navy metropolis. Capital is a separate yellow outline,
+not a fill class. Each represented real
 city receives one anchor tile: 100,000-999,999 is an initial city and 1,000,000+
 is an initial metropolis. Its one game-population value is the GeoNames city
 population. The 2020 WorldPop raster distributes the remaining population over
@@ -47,7 +50,7 @@ non-anchor tiles, and largest remainder reconciles the result to the configured
 2026 UN World Population Prospects national total exactly. An ordinary tile
 over 100,000 stays administrative at scenario start and is instead marked
 `city_upgrade_eligible`; promotion during play is the player's choice. Capital
-fill overrides the city color without changing the stored population.
+status does not change the stored population or underlying fill class.
 
 GeoNames and naming-unit WorldPop sums remain internal inputs for selecting
 display names. They are not alternative game-population fields.

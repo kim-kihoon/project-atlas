@@ -505,22 +505,22 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             not population_total_mismatches,
             f"mismatches={population_total_mismatches}",
         )
-        capital_tiles = [tile for tile in features if str(tile["map_class"] or "") == "capital"]
+        capital_tiles = [tile for tile in features if bool(tile["is_capital"])]
         capital_countries = Counter(str(tile["country_iso3"] or "") for tile in capital_tiles)
         capital_codes = {str(tile["tile_name_code"] or "") for tile in capital_tiles}
         noncapital_capital_duplicates = [
             str(tile["tile_id"]) for tile in features
             if str(tile["tile_name_code"] or "") in capital_codes
-            and str(tile["map_class"] or "") != "capital"
+            and not bool(tile["is_capital"])
         ]
         check(
             "Every country has capital tiles",
             set(capital_countries) == country_iso3s
-            and all(bool(tile["is_capital"]) for tile in capital_tiles),
+            and bool(capital_tiles),
             f"countries={dict(capital_countries)}",
         )
         check(
-            "Every tile named for a capital uses the capital class",
+            "Every tile named for a capital is marked as capital",
             not noncapital_capital_duplicates,
             f"invalid={noncapital_capital_duplicates}",
         )
@@ -538,10 +538,7 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
                 not is_initial_city and not bool(tile["is_capital"])
                 and population >= city_min
             )
-            expected_map_class = (
-                "capital" if bool(tile["is_capital"])
-                else expected_city_class or "admin"
-            )
+            expected_map_class = expected_city_class or "admin"
             expected_named = bool(expected_city_class or bool(tile["is_capital"]))
             if (
                 str(tile["city_class"] or "") != expected_city_class
@@ -561,9 +558,9 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         check("Initial city anchors and player upgrade eligibility are consistent", not tile_city_mismatches,
               f"mismatches={tile_city_mismatches}")
         actual_map_classes = {str(tile["map_class"] or "") for tile in features}
-        expected_map_classes = {"admin", "city", "metropolis", "capital"}
+        expected_map_classes = {"admin", "city", "metropolis"}
         check(
-            "Exactly four tile color classes",
+            "Exactly three tile fill classes; capital is an outline",
             actual_map_classes == expected_map_classes,
             f"actual={sorted(actual_map_classes)}",
         )
@@ -579,6 +576,11 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             "Metropolis fill darker than city fill",
             relative_luminance(colors["metropolis"]) < relative_luminance(colors["city"]),
             f"city={colors['city']}, metropolis={colors['metropolis']}",
+        )
+        check(
+            "Capital outline color is configured",
+            bool(str(colors.get("capital_outline") or "").strip()),
+            f"capital_outline={colors.get('capital_outline')}",
         )
 
         border_layer = QgsVectorLayer(
@@ -645,6 +647,47 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             f"edges={len(border_features)}, invalid={invalid_borders}, "
             f"topology={invalid_topology}, "
             f"missing={sorted(set(expected_border_types) - actual_border_keys)}",
+        )
+        capital_outline_layer = QgsVectorLayer(
+            f"{gpkg}|layername=capital_tile_outlines", "capital_tile_outlines", "ogr"
+        )
+        capital_outline_features = (
+            list(capital_outline_layer.getFeatures())
+            if capital_outline_layer.isValid() else []
+        )
+        expected_capital_edges = set()
+        for edge_key, members in edge_members.items():
+            capital_members = [tile for tile in members if bool(tile["is_capital"])]
+            if len(capital_members) != 1:
+                continue
+            capital = capital_members[0]
+            if len(members) == 2:
+                other = next(tile for tile in members if tile.id() != capital.id())
+                if (
+                    bool(other["is_capital"])
+                    and str(other["tile_name_code"]) == str(capital["tile_name_code"])
+                ):
+                    continue
+            expected_capital_edges.add(edge_key)
+        actual_capital_edges = {
+            str(feature["edge_key"] or "") for feature in capital_outline_features
+        }
+        invalid_capital_edges = [
+            str(feature["edge_key"] or "") for feature in capital_outline_features
+            if str(feature["edge_key"] or "") not in expected_capital_edges
+            or str(feature["tile_id"] or "") not in tile_by_id
+            or not bool(tile_by_id[str(feature["tile_id"])]["is_capital"])
+            or str(feature["capital_code"] or "")
+            != str(tile_by_id[str(feature["tile_id"])]["tile_name_code"])
+        ]
+        check(
+            "Capital outlines follow the exterior of each capital tile group",
+            capital_outline_layer.isValid()
+            and actual_capital_edges == expected_capital_edges
+            and len(capital_outline_features) == len(actual_capital_edges)
+            and not invalid_capital_edges,
+            f"edges={len(capital_outline_features)}, invalid={invalid_capital_edges}, "
+            f"missing={sorted(expected_capital_edges - actual_capital_edges)}",
         )
         coast_layer = QgsVectorLayer(
             f"{gpkg}|layername=coastal_tile_outlines", "coastal_tile_outlines", "ogr"
@@ -724,6 +767,7 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         ]
         path_hits = []
         border_above_tiles = False
+        capital_outline_above_tiles = False
         display_labels_match = False
         files_to_scan = sorted((root / "scripts").glob("*"))
         for path in files_to_scan:
@@ -740,10 +784,15 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
                         continue
                     text = archive.read(member).decode("utf-8", errors="replace")
                     border_position = text.find('name="Game admin borders"')
+                    capital_position = text.find('name="Capital outlines"')
                     tile_position = text.find('name="Korean Peninsula game tiles"')
                     border_above_tiles = (
                         border_position >= 0 and tile_position >= 0
                         and border_position < tile_position
+                    )
+                    capital_outline_above_tiles = (
+                        capital_position >= 0 and tile_position >= 0
+                        and capital_position < tile_position
                     )
                     display_labels_match = (
                         f"tile_name_{display_language}" in text
@@ -762,6 +811,11 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             "Admin border layer renders above tile fills",
             border_above_tiles,
             f"border_above_tiles={border_above_tiles}",
+        )
+        check(
+            "Capital outline layer renders above tile fills",
+            capital_outline_above_tiles,
+            f"capital_outline_above_tiles={capital_outline_above_tiles}",
         )
 
         lines = [

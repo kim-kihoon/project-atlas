@@ -1285,6 +1285,24 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             unique_unit_tiles.update(unit_tiles)
         naming_unit_by_code = {unit["unit_code"]: unit for unit in naming_units}
 
+        capital_border_records = []
+        for edge_key, members in sorted(edge_members.items()):
+            capital_members = [
+                (index, geometry) for index, geometry in members
+                if tile_name_assignments.get(index) in capital_unit_codes
+            ]
+            if len(capital_members) != 1:
+                continue
+            index, geometry = capital_members[0]
+            capital_code = tile_name_assignments[index]
+            if len(members) == 2:
+                other_index = next(value[0] for value in members if value[0] != index)
+                if tile_name_assignments.get(other_index) == capital_code:
+                    continue
+            capital_border_records.append(
+                (geometry, edge_key, capital_code, candidates[index]["tile_id"])
+            )
+
         unrepresented_city_units = sorted(set(city_by_unit_code) - set(unique_unit_tiles))
         city_anchor_by_index = {
             unique_unit_tiles[code]: city for code, city in city_by_unit_code.items()
@@ -1411,8 +1429,8 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 if is_initial_city
                 else None
             )
-            # Capital status follows the final tile name. If the capital naming
-            # unit owns several tiles, every one of them uses the capital class.
+            # Capital status follows the final tile name and controls only the
+            # yellow group outline; fill remains admin/city/metropolis.
             is_capital = naming_code in capital_unit_codes
             city_upgrade_eligible = (
                 not is_initial_city and not is_capital
@@ -1440,7 +1458,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 "city_class": city_class, "is_capital": is_capital,
                 "is_initial_city": is_initial_city,
                 "city_upgrade_eligible": city_upgrade_eligible,
-                "map_class": "capital" if is_capital else city_class or "admin",
+                "map_class": city_class or "admin",
                 "tile_name_code": naming_code,
                 "tile_name_ko": naming_unit["name_ko"],
                 "tile_name_en": naming_unit["name_en"],
@@ -1524,11 +1542,29 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             border_features.append(feature)
         border_layer.dataProvider().addFeatures(border_features)
 
+        capital_border_fields = QgsFields()
+        for name, kind in (
+            ("edge_key", QVariant.String), ("capital_code", QVariant.String),
+            ("tile_id", QVariant.String),
+        ):
+            capital_border_fields.append(QgsField(name, kind))
+        capital_border_layer = memory_layer(
+            "LineString", target_crs, "capital_tile_outlines", capital_border_fields
+        )
+        capital_border_features = []
+        for geometry, edge_key, capital_code, tile_id in capital_border_records:
+            feature = QgsFeature(capital_border_layer.fields())
+            feature.setGeometry(geometry)
+            feature.setAttributes([edge_key, capital_code, tile_id])
+            capital_border_features.append(feature)
+        capital_border_layer.dataProvider().addFeatures(capital_border_features)
+
         write_gpkg_layer(admin_layer, gpkg_path, "admin1_source", True)
         write_gpkg_layer(candidate_layer, gpkg_path, "hex_candidates", False)
         write_gpkg_layer(tile_layer, gpkg_path, "korea_tiles", False)
         write_gpkg_layer(naming_layer, gpkg_path, "admin2_naming_source", False)
         write_gpkg_layer(border_layer, gpkg_path, "admin1_tile_borders", False)
+        write_gpkg_layer(capital_border_layer, gpkg_path, "capital_tile_outlines", False)
         feedback.pushInfo(f"Wrote GeoPackage: {gpkg_path}")
         feedback.setProgress(88)
 
@@ -1543,9 +1579,12 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             f"{gpkg_path}|layername=admin2_naming_source", "City-county naming reference", "ogr"
         )
         persisted_borders = QgsVectorLayer(f"{gpkg_path}|layername=admin1_tile_borders", "Game admin borders", "ogr")
+        persisted_capital_borders = QgsVectorLayer(
+            f"{gpkg_path}|layername=capital_tile_outlines", "Capital outlines", "ogr"
+        )
         for layer in (
             persisted_tiles, persisted_admin, persisted_admin_labels, persisted_candidates,
-            persisted_naming, persisted_borders,
+            persisted_naming, persisted_borders, persisted_capital_borders,
         ):
             if not layer.isValid():
                 raise QgsProcessingException(f"Failed to reload persisted layer: {layer.name()}")
@@ -1557,16 +1596,14 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 "admin": "Administrative tile",
                 "city": "City · population 100,000–999,999",
                 "metropolis": "Metropolis · population 1,000,000+",
-                "capital": "Capital",
             },
             "ko": {
                 "admin": "일반 행정구역",
                 "city": "도시 · 인구 10만 이상 100만 미만",
                 "metropolis": "대도시 · 인구 100만 이상",
-                "capital": "수도",
             },
         }
-        for value in ("admin", "city", "metropolis", "capital"):
+        for value in ("admin", "city", "metropolis"):
             label = category_labels[display_language][value]
             symbol = QgsFillSymbol.createSimple(
                 {"color": class_colors[value], "outline_color": "#6b737b", "outline_width": "0.25"}
@@ -1643,6 +1680,16 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         persisted_borders.setRenderer(
             QgsCategorizedSymbolRenderer("edge_type", border_categories)
         )
+        persisted_capital_borders.setRenderer(
+            QgsSingleSymbolRenderer(
+                QgsLineSymbol.createSimple(
+                    {
+                        "line_color": class_colors["capital_outline"],
+                        "line_width": "1.4", "capstyle": "round", "joinstyle": "round",
+                    }
+                )
+            )
+        )
         persisted_naming.setRenderer(
             QgsSingleSymbolRenderer(
                 QgsFillSymbol.createSimple(
@@ -1663,8 +1710,10 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         reference_group = root_node.addGroup("Validation Reference")
         project.addMapLayer(persisted_tiles, False)
         project.addMapLayer(persisted_admin_labels, False)
+        project.addMapLayer(persisted_capital_borders, False)
         project.addMapLayer(persisted_borders, False)
         game_group.addLayer(persisted_admin_labels)
+        game_group.addLayer(persisted_capital_borders)
         game_group.addLayer(persisted_borders)
         game_group.addLayer(persisted_tiles)
         project.addMapLayer(persisted_admin, False)
@@ -1679,7 +1728,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             raise QgsProcessingException(f"Failed to write QGIS project: {project_path}")
 
         render_preview(
-            [persisted_admin_labels, persisted_borders, persisted_tiles],
+            [persisted_admin_labels, persisted_capital_borders, persisted_borders, persisted_tiles],
             preview_path,
         )
 
@@ -1738,8 +1787,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             unit["population_method"] for unit in naming_units
         )
         tile_class_counts = Counter(
-            "capital" if tile_name_assignments[index] in capital_unit_codes
-            else "metropolis"
+            "metropolis"
             if index in city_anchor_by_index
             and tile_populations[index] >= int(city_classes["metropolis_population_min"])
             else "city"
@@ -1764,7 +1812,8 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 "Each real city receives one representative anchor tile with its GeoNames city population.",
                 "WorldPop distributes the residual population; UN WPP fixes the exact national total.",
                 "Non-city tiles over 100,000 residents are upgrade-eligible, not automatically cities.", "",
-                f"- Capital tiles: {tile_class_counts.get('capital', 0)}",
+                f"- Capital tiles outlined in yellow: "
+                f"{sum(1 for index in selected_indexes if tile_name_assignments[index] in capital_unit_codes)}",
                 f"- Metropolis tiles: {tile_class_counts.get('metropolis', 0)}",
                 f"- City tiles: {tile_class_counts.get('city', 0)}",
                 f"- Player city-upgrade eligible tiles: {upgrade_eligible_count}",
