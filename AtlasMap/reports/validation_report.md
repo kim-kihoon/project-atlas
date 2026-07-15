@@ -1,6 +1,6 @@
 # Atlas Korea validation report
 
-Generated: 2026-07-15T01:46:09.914263+00:00
+Generated: 2026-07-15T01:54:15.429436+00:00
 
 Overall result: **PASS**
 
@@ -30,7 +30,7 @@ Overall result: **PASS**
 | City class follows final same-owner tile name | PASS | mismatches=[] |
 | Exactly four tile color classes | PASS | actual=['admin', 'capital', 'city', 'metropolis'] |
 | Metropolis fill darker than city fill | PASS | city=#4aa3d8, metropolis=#173f6f |
-| Admin borders contain each differing-owner shared edge once | PASS | edges=83, invalid=[], missing=[] |
+| Same-owner groups have complete topology-derived outlines | PASS | edges=253, invalid=[], topology=[], missing=[] |
 | Coastal lines are ocean-adjacent outer edges only | PASS | edges=95, invalid=[] |
 | Valid geometries | PASS | invalid=[] |
 | Complete regular hexagons | PASS | invalid=[] |

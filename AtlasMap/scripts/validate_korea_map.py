@@ -56,6 +56,28 @@ def polygon_edges(geometry):
     ]
 
 
+def hex_edge_keys(geometry, precision=3):
+    polygon = geometry.asMultiPolygon()[0] if geometry.isMultipart() else geometry.asPolygon()
+    if not polygon:
+        return []
+    ring = polygon[0]
+    points = list(ring[:-1] if ring and ring[0] == ring[-1] else ring)
+    keys = []
+    for index, first in enumerate(points):
+        second = points[(index + 1) % len(points)]
+        endpoints = sorted(
+            (
+                (round(first.x(), precision), round(first.y(), precision)),
+                (round(second.x(), precision), round(second.y(), precision)),
+            )
+        )
+        keys.append(
+            f"{endpoints[0][0]:.{precision}f},{endpoints[0][1]:.{precision}f}|"
+            f"{endpoints[1][0]:.{precision}f},{endpoints[1][1]:.{precision}f}"
+        )
+    return keys
+
+
 class AtlasKoreaValidate(QgsProcessingAlgorithm):
     def name(self):
         return "atlas_korea_validate"
@@ -334,39 +356,53 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         )
         border_features = list(border_layer.getFeatures()) if border_layer.isValid() else []
         tile_by_id = {str(tile["tile_id"]): tile for tile in features}
-        expected_border_edges = set()
+        edge_members = {}
         for tile in features:
-            tile_id = str(tile["tile_id"])
-            admin_a = str(tile["admin1_code"])
-            try:
-                neighbor_ids = json.loads(str(tile["neighbor_ids"] or "[]"))
-            except (TypeError, ValueError, json.JSONDecodeError):
-                neighbor_ids = []
-            for neighbor_id in neighbor_ids:
-                neighbor = tile_by_id.get(str(neighbor_id))
-                if neighbor is not None and admin_a != str(neighbor["admin1_code"]):
-                    expected_border_edges.add(tuple(sorted((tile_id, str(neighbor_id)))))
-        actual_border_edges = set()
+            for edge_key in hex_edge_keys(tile.geometry()):
+                edge_members.setdefault(edge_key, []).append(tile)
+        expected_border_types = {}
+        invalid_topology = []
+        for edge_key, members in edge_members.items():
+            if len(members) == 1:
+                expected_border_types[edge_key] = "exterior"
+            elif len(members) == 2:
+                if str(members[0]["admin1_code"]) != str(members[1]["admin1_code"]):
+                    expected_border_types[edge_key] = "admin"
+            else:
+                invalid_topology.append((edge_key, len(members)))
+        actual_border_keys = set()
         invalid_borders = []
         for border in border_features:
+            edge_key = str(border["edge_key"] or "")
+            edge_type = str(border["edge_type"] or "")
             tile_a = str(border["tile_id_a"] or "")
             tile_b = str(border["tile_id_b"] or "")
             admin_a = str(border["admin_a"] or "")
             admin_b = str(border["admin_b"] or "")
-            edge = tuple(sorted((tile_a, tile_b)))
-            actual_border_edges.add(edge)
-            if (
-                tile_a not in tile_by_id or tile_b not in tile_by_id
-                or admin_a not in targets or admin_b not in targets or admin_a == admin_b
-                or border.geometry().isEmpty()
-            ):
-                invalid_borders.append(edge)
+            actual_border_keys.add(edge_key)
+            valid = (
+                edge_key in expected_border_types
+                and edge_type == expected_border_types.get(edge_key)
+                and tile_a in tile_by_id and admin_a == str(tile_by_id[tile_a]["admin1_code"])
+                and not border.geometry().isEmpty()
+            )
+            if edge_type == "admin":
+                valid = valid and (
+                    tile_b in tile_by_id and admin_b == str(tile_by_id[tile_b]["admin1_code"])
+                    and admin_a != admin_b
+                )
+            elif edge_type == "exterior":
+                valid = valid and not tile_b and not admin_b
+            if not valid:
+                invalid_borders.append(edge_key)
         check(
-            "Admin borders contain each differing-owner shared edge once",
-            border_layer.isValid() and actual_border_edges == expected_border_edges
-            and len(border_features) == len(actual_border_edges) and not invalid_borders,
+            "Same-owner groups have complete topology-derived outlines",
+            border_layer.isValid() and actual_border_keys == set(expected_border_types)
+            and len(border_features) == len(actual_border_keys)
+            and not invalid_borders and not invalid_topology,
             f"edges={len(border_features)}, invalid={invalid_borders}, "
-            f"missing={sorted(expected_border_edges - actual_border_edges)}",
+            f"topology={invalid_topology}, "
+            f"missing={sorted(set(expected_border_types) - actual_border_keys)}",
         )
         coast_layer = QgsVectorLayer(
             f"{gpkg}|layername=coastal_tile_outlines", "coastal_tile_outlines", "ogr"

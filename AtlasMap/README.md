@@ -28,10 +28,10 @@ capital color follow the final tile name, not an independently located point.
 The map uses exactly four tile fill classes: ordinary administrative tile,
 light-blue city (500,000-999,999), dark-navy metropolis (1,000,000+), and
 gold capital. Ordinary tiles do not receive separate province colors.
-Administrative borders contain only shared hex edges whose two tiles have
-different `admin1_code` values. Each qualifying edge is normalized and rendered
-once as a dark line above the tile fills, so same-owner internal edges never
-become province borders. Solid blue coastal lines include only outer
+Administrative borders are the complete topology-derived outlines of same-owner
+tile groups. Every hex edge is keyed explicitly: edges shared by tiles with the
+same `admin1_code` cancel, while different-owner and exterior edges remain and
+render once above the tile fills. Solid blue coastal lines include only outer
 tile edges adjacent to an ocean-dominant grid cell;
 they never outline a complete coastal hex. No city-marker layer is displayed or
 published.

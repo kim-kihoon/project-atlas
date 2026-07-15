@@ -101,6 +101,23 @@ def shared_edge_geometry(first, second):
     return QgsGeometry()
 
 
+def hex_edge_records(geometry, precision=3):
+    ring = geometry.asPolygon()[0]
+    points = list(ring[:-1] if ring and ring[0] == ring[-1] else ring)
+    records = []
+    for index, first in enumerate(points):
+        second = points[(index + 1) % len(points)]
+        first_key = (round(first.x(), precision), round(first.y(), precision))
+        second_key = (round(second.x(), precision), round(second.y(), precision))
+        endpoints = sorted((first_key, second_key))
+        key = (
+            f"{endpoints[0][0]:.{precision}f},{endpoints[0][1]:.{precision}f}|"
+            f"{endpoints[1][0]:.{precision}f},{endpoints[1][1]:.{precision}f}"
+        )
+        records.append((key, QgsGeometry.fromPolylineXY([first, second])))
+    return records
+
+
 def load_city_source(root, settings):
     source = settings["city_source"]
     archive_path = resolve(root, source["path"])
@@ -785,7 +802,6 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         selected_indexes = sorted(assignments, key=lambda i: candidates[i]["tile_id"])
         selected_ids = {candidates[i]["tile_id"] for i in selected_indexes}
         neighbors = {tile_id: [] for tile_id in selected_ids}
-        admin_border_records = []
         for position, first_index in enumerate(selected_indexes):
             first = candidates[first_index]
             for second_index in selected_indexes[position + 1 :]:
@@ -798,17 +814,38 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 if shared_geometry.length() >= side * 0.5:
                     neighbors[first["tile_id"]].append(second["tile_id"])
                     neighbors[second["tile_id"]].append(first["tile_id"])
-                    first_admin = assignments[first_index]
-                    second_admin = assignments[second_index]
-                    if first_admin != second_admin:
-                        admin_border_records.append(
-                            (
-                                shared_geometry, first["tile_id"], second["tile_id"],
-                                first_admin, second_admin,
-                            )
-                        )
         for value in neighbors.values():
             value.sort()
+
+        edge_members = {}
+        for index in selected_indexes:
+            for edge_key, geometry in hex_edge_records(candidates[index]["geometry"]):
+                edge_members.setdefault(edge_key, []).append((index, geometry))
+        admin_border_records = []
+        for edge_key, members in sorted(edge_members.items()):
+            if len(members) == 1:
+                first_index, geometry = members[0]
+                admin_border_records.append(
+                    (
+                        geometry, edge_key, "exterior", candidates[first_index]["tile_id"], "",
+                        assignments[first_index], "",
+                    )
+                )
+            elif len(members) == 2:
+                (first_index, geometry), (second_index, _) = members
+                first_admin = assignments[first_index]
+                second_admin = assignments[second_index]
+                if first_admin != second_admin:
+                    admin_border_records.append(
+                        (
+                            geometry, edge_key, "admin", candidates[first_index]["tile_id"],
+                            candidates[second_index]["tile_id"], first_admin, second_admin,
+                        )
+                    )
+            else:
+                raise QgsProcessingException(
+                    f"Hex edge {edge_key} belongs to {len(members)} selected tiles"
+                )
 
         coastal_edge_records = []
         for index in selected_indexes:
@@ -1058,16 +1095,17 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
 
         border_fields = QgsFields()
         for name, kind in (
+            ("edge_key", QVariant.String), ("edge_type", QVariant.String),
             ("tile_id_a", QVariant.String), ("tile_id_b", QVariant.String),
             ("admin_a", QVariant.String), ("admin_b", QVariant.String),
         ):
             border_fields.append(QgsField(name, kind))
         border_layer = memory_layer("LineString", target_crs, "admin1_tile_borders", border_fields)
         border_features = []
-        for geometry, tile_a, tile_b, admin_a, admin_b in admin_border_records:
+        for geometry, edge_key, edge_type, tile_a, tile_b, admin_a, admin_b in admin_border_records:
             feature = QgsFeature(border_layer.fields())
             feature.setGeometry(geometry)
-            feature.setAttributes([tile_a, tile_b, admin_a, admin_b])
+            feature.setAttributes([edge_key, edge_type, tile_a, tile_b, admin_a, admin_b])
             border_features.append(feature)
         border_layer.dataProvider().addFeatures(border_features)
 
