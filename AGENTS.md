@@ -3,14 +3,15 @@
 ## Mission
 
 Build a reproducible QGIS pipeline for the modern nation-management 4X game
-**Atlas**. The first deliverable is a Republic of Korea game map composed of
-complete regular hexagons. Work must be reproducible on macOS and
+**Atlas**. The first deliverable is a Korean Peninsula game map containing KOR
+and PRK on one common grid of complete regular hexagons. Work must be reproducible on macOS and
 Windows with QGIS LTR 3.44, PyQGIS, and `qgis_process`.
 
 The project is a game-map approximation. Do not enforce a fixed national tile
 count. Assign each global-grid hex to the country or ocean occupying its largest
-area; keep only Korea-dominant hexes as Korean tiles. Assign each Korean tile to
-the admin area with the greatest overlap. Admin target counts are advisory;
+area; keep KOR- and PRK-dominant hexes as their respective national tiles.
+Assign each tile only to a greatest-overlap admin area in the same country.
+National ownership may never cross or collide. Admin target counts are advisory;
 only configured minimum representation is mandatory.
 
 ## Workspace and Safety Rules
@@ -93,7 +94,8 @@ required GeoPackage remain trackable.
 Store every adjustable design value and validation tolerance in
 `config/atlas_korea.json`. Do not duplicate these constants in Python:
 
-- Country: Republic of Korea; ISO3: `KOR`
+- Countries: Republic of Korea (`KOR`) and Democratic People's Republic of
+  Korea (`PRK`), generated simultaneously on the same grid
 - Project CRS: `EPSG:5179` (`KGD2002 / Unified CS`)
 - National tile count: derived from dominant country-or-ocean overlap, not fixed
 - Target area per regular hexagon: 605.21 km2
@@ -178,9 +180,9 @@ produce the same geometries, assignments, and stable `tile_id` values:
 
 Create at least these layers in `Atlas_Korea.gpkg`:
 
-- `admin1_source`: cleaned/reprojected 17-area reference boundaries
+- `admin1_source`: cleaned/reprojected KOR and PRK first-level boundaries
 - `hex_candidates`: all candidates and overlap scores
-- `korea_tiles`: all Korea-dominant final game hexagons
+- `korea_tiles`: all KOR- and PRK-dominant final game hexagons
 
 `korea_tiles` must include at least:
 

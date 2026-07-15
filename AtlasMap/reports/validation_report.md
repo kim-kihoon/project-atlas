@@ -1,6 +1,6 @@
-# Atlas Korea validation report
+# Atlas Korean Peninsula validation report
 
-Generated: 2026-07-15T02:19:40.079807+00:00
+Generated: 2026-07-15T02:49:54.715851+00:00
 
 Overall result: **PASS**
 
@@ -8,32 +8,35 @@ Overall result: **PASS**
 | --- | --- | --- |
 | GeoPackage layer loads | PASS | /Users/kimkihoon/Desktop/my-projects/atlas/AtlasMap/data/processed/Atlas_Korea.gpkg |
 | CRS | PASS | EPSG:5179 |
-| Final country code | PASS | wrong_country=[] |
+| Final country codes | PASS | wrong_country=[] |
 | Tile IDs present | PASS | blank=0 |
 | Tile IDs unique | PASS | duplicates=[] |
 | Admin minimum representation | PASS | deficits={}, unexpected=[] |
+| Existing South Korea allocation is unchanged | PASS | country={}, admin={} |
 | Exactly one admin assignment | PASS | invalid=[] |
+| Admin assignment never crosses a country boundary | PASS | invalid=[] |
 | Dominant country-or-ocean calculation | PASS | invalid=[] |
 | Dominant-country tile selection | PASS | selection_difference=[] |
-| Derived final tile count | PASS | actual=160, derived=160 |
+| Derived final tile count | PASS | actual=364, derived=364 |
+| Every tile retains its dominant national owner | PASS | mismatches=[] |
 | Assignment methods | PASS | invalid=[] |
 | Dominant-overlap assignments | PASS | mismatches=[] |
 | Tile naming fields | PASS | missing=[] |
 | Every tile has one display name | PASS | blank=[] |
 | Tile naming methods | PASS | invalid=[] |
-| Naming reference layer | PASS | units=161 |
+| Naming reference layer | PASS | units=337 |
 | Population values are positive integers with provenance | PASS | invalid=[] |
 | All naming-unit populations are resolved | PASS | unresolved=[] |
 | Tile name belongs to admin owner | PASS | mismatches=[] |
 | Maximum-overlap default names | PASS | mismatches=[] |
 | Unique representatives after redistribution | PASS | invalid=[], duplicates=[] |
 | City marker layer removed | PASS | layer_valid=False |
-| Global city-source and classification thresholds agree | PASS | city=100000, source=100000 |
-| Exactly one capital tile | PASS | tiles=1 |
+| Global city-source and classification thresholds agree | PASS | city=100000, sources=[100000, 100000] |
+| Exactly one capital tile per country | PASS | countries={'KOR': 1, 'PRK': 1} |
 | City class follows final same-owner tile name | PASS | mismatches=[] |
 | Exactly four tile color classes | PASS | actual=['admin', 'capital', 'city', 'metropolis'] |
 | Metropolis fill darker than city fill | PASS | city=#4aa3d8, metropolis=#173f6f |
-| Same-owner groups have complete topology-derived outlines | PASS | edges=253, invalid=[], topology=[], missing=[] |
+| Same-owner groups have complete topology-derived outlines | PASS | edges=526, invalid=[], topology=[], missing=[] |
 | Coastal line layer is intentionally absent | PASS | coastal_tile_outlines is not published during border development |
 | Valid geometries | PASS | invalid=[] |
 | Complete regular hexagons | PASS | invalid=[] |
@@ -68,3 +71,14 @@ Targets are advisory; minimums are validation gates.
 | KR-47 | 30 | 1 | 30 | 0 |
 | KR-48 | 17 | 1 | 16 | -1 |
 | KR-49 | 3 | 1 | 3 | 0 |
+| KP-01 | 5 | 1 | 4 | -1 |
+| KP-02 | 20 | 1 | 17 | -3 |
+| KP-03 | 20 | 1 | 19 | -1 |
+| KP-04 | 27 | 1 | 26 | -1 |
+| KP-05 | 14 | 1 | 14 | 0 |
+| KP-06 | 13 | 1 | 18 | 5 |
+| KP-07 | 18 | 1 | 18 | 0 |
+| KP-08 | 31 | 1 | 33 | 2 |
+| KP-09 | 27 | 1 | 30 | 3 |
+| KP-10 | 23 | 1 | 24 | 1 |
+| KP-13 | 1 | 1 | 1 | 0 |

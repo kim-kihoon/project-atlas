@@ -1,13 +1,18 @@
-# Atlas Korea QGIS Map
+# Atlas Korean Peninsula QGIS Map
 
-This directory contains the reproducible GIS pipeline for the Republic of Korea
-prototype map used by **Atlas**. The map uses complete regular hexagons in
-EPSG:5179 and assigns each tile first to its dominant country-or-ocean overlap,
-then to a first-level administrative area.
+This directory contains the reproducible GIS pipeline for the Korean Peninsula
+prototype map used by **Atlas**. It builds the Republic of Korea and the
+Democratic People's Republic of Korea together on one common regular-hex grid
+in EPSG:5179. Each tile goes first to its dominant country-or-ocean overlap,
+then only to a first-level administrative area belonging to that same country.
 
-There is no fixed national tile count. A tile belongs to Korea only when Korean
-land occupies more of it than any neighboring country or the ocean. Korean
-tiles are assigned to the administrative area occupying their largest portion.
+There is no fixed national tile count. A tile belongs to KOR or PRK only when
+that country's land occupies more of it than every neighboring country and the
+ocean. The two countries are evaluated simultaneously, so they cannot claim the
+same tile or assign a tile to an administrative area across the national border.
+Country-border edges are stored separately from ordinary admin-border edges.
+Tiles are then assigned to the same-country administrative area occupying their
+largest portion.
 Each configured admin area is guaranteed one tile only when dominant-overlap
 assignment would otherwise leave it unrepresented. Historical target counts
 are advisory report values.
@@ -71,6 +76,10 @@ path of `qgis_process.exe` before running either launcher.
 - `reports/allocation_report.md`: target and actual tile allocation.
 - `reports/validation_report.md`: release-gate validation results.
 - `exports/Atlas_Korea_Tiles.geojson` and `.csv`: Unreal-oriented exports.
+
+The current deterministic build contains 160 KOR tiles and 204 PRK tiles.
+Adding PRK is regression-gated against all 160 existing KOR tiles and their
+previous Admin-1 counts.
 
 QGIS terms for beginners: a **layer** is one collection of map features; a
 **GeoPackage** is one database file that can hold several layers; a **CRS** is

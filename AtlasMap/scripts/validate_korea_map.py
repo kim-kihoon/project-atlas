@@ -34,6 +34,17 @@ def resolve(root, relative_path):
     return path
 
 
+def configured_countries(settings):
+    primary = {
+        "country": settings["country"],
+        "city_source": settings["city_source"],
+        "tile_naming": settings["tile_naming"],
+        "population_fallback": settings["population_fallback"],
+        "admin1": settings["admin1"],
+    }
+    return [primary, *settings.get("additional_countries", [])]
+
+
 def polygon_edges(geometry):
     if geometry.isMultipart():
         polygons = geometry.asMultiPolygon()
@@ -105,6 +116,13 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         config_path = Path(self.parameterAsFile(parameters, CONFIG, context)).resolve()
         root = config_path.parent.parent.resolve()
         settings = json.loads(config_path.read_text(encoding="utf-8"))
+        country_settings = configured_countries(settings)
+        country_iso3s = {item["country"]["iso3"] for item in country_settings}
+        admins = [admin for item in country_settings for admin in item["admin1"]]
+        admin_country = {
+            admin["code"]: item["country"]["iso3"]
+            for item in country_settings for admin in item["admin1"]
+        }
         validation = settings["validation"]
         gpkg = resolve(root, settings["outputs"]["geopackage"])
         project_path = resolve(root, settings["outputs"]["project"])
@@ -127,12 +145,11 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
 
         check("CRS", layer.crs().authid() == settings["crs"], layer.crs().authid())
         features = list(layer.getFeatures())
-        country_iso3 = settings["country"]["iso3"]
         wrong_country = [
             str(feature["tile_id"]) for feature in features
-            if str(feature["country_iso3"] or "") != country_iso3
+            if str(feature["country_iso3"] or "") not in country_iso3s
         ]
-        check("Final country code", not wrong_country, f"wrong_country={wrong_country}")
+        check("Final country codes", not wrong_country, f"wrong_country={wrong_country}")
 
         ids = [str(feature["tile_id"] or "") for feature in features]
         blank_ids = [i for i in ids if not i]
@@ -140,8 +157,8 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         check("Tile IDs present", not blank_ids, f"blank={len(blank_ids)}")
         check("Tile IDs unique", not duplicate_ids, f"duplicates={duplicate_ids}")
 
-        targets = {item["code"]: int(item["target_tiles"]) for item in settings["admin1"]}
-        minimums = {item["code"]: int(item.get("minimum_tiles", 0)) for item in settings["admin1"]}
+        targets = {item["code"]: int(item["target_tiles"]) for item in admins}
+        minimums = {item["code"]: int(item.get("minimum_tiles", 0)) for item in admins}
         actual = Counter(str(feature["admin1_code"] or "") for feature in features)
         minimum_deficits = {
             code: actual.get(code, 0) - minimum for code, minimum in minimums.items()
@@ -153,8 +170,44 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             not minimum_deficits and not unexpected_codes,
             f"deficits={minimum_deficits}, unexpected={unexpected_codes}",
         )
+        actual_country_counts = Counter(
+            str(feature["country_iso3"] or "") for feature in features
+        )
+        expected_country_counts = {
+            str(code): int(count)
+            for code, count in validation.get("expected_country_tile_counts", {}).items()
+        }
+        country_regressions = {
+            code: (actual_country_counts.get(code, 0), expected)
+            for code, expected in expected_country_counts.items()
+            if actual_country_counts.get(code, 0) != expected
+        }
+        expected_admin_counts = {
+            str(code): int(count)
+            for code, count in validation.get("expected_admin_tile_counts", {}).items()
+        }
+        admin_regressions = {
+            code: (actual.get(code, 0), expected)
+            for code, expected in expected_admin_counts.items()
+            if actual.get(code, 0) != expected
+        }
+        check(
+            "Existing South Korea allocation is unchanged",
+            not country_regressions and not admin_regressions,
+            f"country={country_regressions}, admin={admin_regressions}",
+        )
         invalid_assignment = [feature["tile_id"] for feature in features if not feature["admin1_code"]]
         check("Exactly one admin assignment", not invalid_assignment, f"invalid={invalid_assignment}")
+        cross_country_assignments = [
+            str(feature["tile_id"]) for feature in features
+            if admin_country.get(str(feature["admin1_code"] or ""))
+            != str(feature["country_iso3"] or "")
+        ]
+        check(
+            "Admin assignment never crosses a country boundary",
+            not cross_country_assignments,
+            f"invalid={cross_country_assignments}",
+        )
 
         candidate_layer = QgsVectorLayer(f"{gpkg}|layername=hex_candidates", "hex_candidates", "ogr")
         candidate_features = list(candidate_layer.getFeatures()) if candidate_layer.isValid() else []
@@ -182,7 +235,7 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         )
         expected_country_selection = {
             str(feature["candidate_id"]) for feature in candidate_features
-            if str(feature["dominant_territory"] or "") == country_iso3
+            if str(feature["dominant_territory"] or "") in country_iso3s
         }
         selection_difference = sorted(selected_candidate_ids.symmetric_difference(expected_country_selection))
         check(
@@ -194,6 +247,22 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             "Derived final tile count",
             len(features) == len(expected_country_selection),
             f"actual={len(features)}, derived={len(expected_country_selection)}",
+        )
+        final_country_by_id = {
+            str(feature["tile_id"]): str(feature["country_iso3"] or "") for feature in features
+        }
+        candidate_country_by_id = {
+            str(feature["candidate_id"]): str(feature["dominant_territory"] or "")
+            for feature in candidate_features
+        }
+        country_owner_mismatches = sorted(
+            tile_id for tile_id, country in final_country_by_id.items()
+            if country != candidate_country_by_id.get(tile_id)
+        )
+        check(
+            "Every tile retains its dominant national owner",
+            not country_owner_mismatches,
+            f"mismatches={country_owner_mismatches}",
         )
         dominant_mismatches = [
             str(feature["tile_id"]) for feature in features
@@ -308,7 +377,10 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         final_name_counts = Counter(str(feature["tile_name_code"] or "") for feature in features)
         representation_errors = []
         representation_codes = []
-        minimum_share = float(settings["tile_naming"]["minimum_tile_share"])
+        minimum_share_by_admin = {
+            admin["code"]: float(item["tile_naming"]["minimum_tile_share"])
+            for item in country_settings for admin in item["admin1"]
+        }
         for tile in features:
             method = str(tile["tile_name_method"] or "")
             if method not in {"unique_representation", "positive_overlap_representation"}:
@@ -319,6 +391,7 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
                 float(tile["tile_name_overlap_km2"] or 0.0)
                 / float(tile["area_km2"] or 1.0)
             )
+            minimum_share = minimum_share_by_admin[str(tile["admin1_code"])]
             normal_valid = method == "unique_representation" and overlap_share + 1e-9 >= minimum_share
             rescue_valid = (
                 method == "positive_overlap_representation" and overlap_share > 0
@@ -341,14 +414,21 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         metropolis_min = int(settings["city_classification"]["metropolis_population_min"])
         check(
             "Global city-source and classification thresholds agree",
-            city_min == int(settings["city_source"]["minimum_population"]) == 100000,
-            f"city={city_min}, source={settings['city_source']['minimum_population']}",
+            city_min == 100000 and all(
+                int(item["city_source"]["minimum_population"]) == city_min
+                for item in country_settings
+            ),
+            f"city={city_min}, sources="
+            f"{[item['city_source']['minimum_population'] for item in country_settings]}",
         )
         capital_tiles = [tile for tile in features if str(tile["map_class"] or "") == "capital"]
+        capital_countries = Counter(str(tile["country_iso3"] or "") for tile in capital_tiles)
         check(
-            "Exactly one capital tile",
-            len(capital_tiles) == 1 and bool(capital_tiles[0]["is_capital"]),
-            f"tiles={len(capital_tiles)}",
+            "Exactly one capital tile per country",
+            set(capital_countries) == country_iso3s
+            and all(count == 1 for count in capital_countries.values())
+            and all(bool(tile["is_capital"]) for tile in capital_tiles),
+            f"countries={dict(capital_countries)}",
         )
         tile_city_mismatches = []
         for tile in features:
@@ -406,7 +486,11 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
                 expected_border_types[edge_key] = "exterior"
             elif len(members) == 2:
                 if str(members[0]["admin1_code"]) != str(members[1]["admin1_code"]):
-                    expected_border_types[edge_key] = "admin"
+                    expected_border_types[edge_key] = (
+                        "country"
+                        if str(members[0]["country_iso3"]) != str(members[1]["country_iso3"])
+                        else "admin"
+                    )
             else:
                 invalid_topology.append((edge_key, len(members)))
         actual_border_keys = set()
@@ -418,20 +502,28 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             tile_b = str(border["tile_id_b"] or "")
             admin_a = str(border["admin_a"] or "")
             admin_b = str(border["admin_b"] or "")
+            country_a = str(border["country_a"] or "")
+            country_b = str(border["country_b"] or "")
             actual_border_keys.add(edge_key)
             valid = (
                 edge_key in expected_border_types
                 and edge_type == expected_border_types.get(edge_key)
                 and tile_a in tile_by_id and admin_a == str(tile_by_id[tile_a]["admin1_code"])
+                and country_a == str(tile_by_id[tile_a]["country_iso3"])
                 and not border.geometry().isEmpty()
             )
-            if edge_type == "admin":
+            if edge_type in {"admin", "country"}:
                 valid = valid and (
                     tile_b in tile_by_id and admin_b == str(tile_by_id[tile_b]["admin1_code"])
+                    and country_b == str(tile_by_id[tile_b]["country_iso3"])
                     and admin_a != admin_b
                 )
+                if edge_type == "country":
+                    valid = valid and country_a != country_b
+                else:
+                    valid = valid and country_a == country_b
             elif edge_type == "exterior":
-                valid = valid and not tile_b and not admin_b
+                valid = valid and not tile_b and not admin_b and not country_b
             if not valid:
                 invalid_borders.append(edge_key)
         check(
@@ -536,7 +628,7 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
                         continue
                     text = archive.read(member).decode("utf-8", errors="replace")
                     border_position = text.find('name="Game admin borders"')
-                    tile_position = text.find('name="Korea game tiles"')
+                    tile_position = text.find('name="Korean Peninsula game tiles"')
                     border_above_tiles = (
                         border_position >= 0 and tile_position >= 0
                         and border_position < tile_position
@@ -552,7 +644,7 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         )
 
         lines = [
-            "# Atlas Korea validation report", "",
+            "# Atlas Korean Peninsula validation report", "",
             f"Generated: {datetime.now(timezone.utc).isoformat()}", "",
             f"Overall result: **{'PASS' if not failures else 'FAIL'}**", "",
             "| Check | Result | Detail |", "| --- | --- | --- |",
@@ -566,7 +658,7 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             "| Code | Target | Minimum | Actual | Difference |",
             "| --- | ---: | ---: | ---: | ---: |",
         ])
-        for item in settings["admin1"]:
+        for item in admins:
             code = item["code"]
             target = int(item["target_tiles"])
             value = actual.get(code, 0)

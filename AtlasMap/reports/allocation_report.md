@@ -1,12 +1,13 @@
-# Atlas Korea tile allocation report
+# Atlas Korean Peninsula tile allocation report
 
-Generated: 2026-07-15T02:19:39.001253+00:00
+Generated: 2026-07-15T02:49:53.389387+00:00
 
 - Orientation: `pointy_top`
-- Final tiles: **160**
+- Final tiles: **364**
 - Target tile area: 605.21 km2
 
 - Country selection: dominant overlap among nearby countries and ocean; no fixed national total
+- Country ownership: a tile and its assigned Admin-1 always belong to the same dominant country
 - Assignment policy: dominant administrative overlap with configured minimum representation
 - Target counts are advisory, not hard constraints
 
@@ -29,6 +30,17 @@ Generated: 2026-07-15T02:19:39.001253+00:00
 | KR-47 | 경북 / Gyeongbuk | 30 | 1 | 30 | 0 |
 | KR-48 | 경남 / Gyeongnam | 17 | 1 | 16 | -1 |
 | KR-49 | 제주 / Jeju | 3 | 1 | 3 | 0 |
+| KP-01 | 평양 / Pyongyang | 5 | 1 | 4 | -1 |
+| KP-02 | 평안남도 / South Pyongan | 20 | 1 | 17 | -3 |
+| KP-03 | 평안북도 / North Pyongan | 20 | 1 | 19 | -1 |
+| KP-04 | 자강도 / Chagang | 27 | 1 | 26 | -1 |
+| KP-05 | 황해남도 / South Hwanghae | 14 | 1 | 14 | 0 |
+| KP-06 | 황해북도 / North Hwanghae | 13 | 1 | 18 | 5 |
+| KP-07 | 강원도 / Kangwon | 18 | 1 | 18 | 0 |
+| KP-08 | 함경남도 / South Hamgyong | 31 | 1 | 33 | 2 |
+| KP-09 | 함경북도 / North Hamgyong | 27 | 1 | 30 | 3 |
+| KP-10 | 량강도 / Ryanggang | 23 | 1 | 24 | 1 |
+| KP-13 | 라선 / Rason | 1 | 1 | 1 | 0 |
 
 ## Minimum-representation exceptions
 
@@ -47,25 +59,25 @@ Generated: 2026-07-15T02:19:39.001253+00:00
 - Duplicate pass: each unit keeps its largest-overlap representative tile
 - Redistribution: unrepresented units take compatible vacancies in population order
 - Candidate threshold: any positive overlap; no minimum share
-- Naming units: 161
-- Uniquely represented units: 130
-- Positive-overlap representatives below the legacy 5% reporting threshold: 10
-- Dominant-overlap fill tiles: 21
-- Population-redistribution fill tiles: 8
+- Naming units: 337
+- Uniquely represented units: 274
+- Positive-overlap representatives below the legacy 5% reporting threshold: 20
+- Dominant-overlap fill tiles: 69
+- Population-redistribution fill tiles: 20
 - Same-owner nearest-boundary fallbacks: 1
 
 ## Population-based city classes
 
 City class changes tile fill only; no city-marker layer is published.
 
-- Qualifying metropolis naming units: 11
-- Qualifying city naming units: 65
-- Capital tiles: 1
+- Qualifying metropolis naming units: 12
+- Qualifying city naming units: 150
+- Capital tiles: 5
 - Metropolis tiles: 10
-- City tiles: 60
-- GeoNames ADM2 populations: 146
-- GeoNames populated-place recoveries: 14
-- WorldPop zonal recoveries: 1
+- City tiles: 160
+- GeoNames ADM2 populations: 147
+- GeoNames populated-place recoveries: 31
+- WorldPop zonal recoveries: 159
 
 ## Boundary tiles
 
@@ -142,10 +154,106 @@ City class changes tile fill only; no city-marker layer is published.
 - `KOR_P_R100042_C100018` -> `KR-41`; intersects KR-11, KR-41
 - `KOR_P_R100042_C100019` -> `KR-41`; intersects KR-41, KR-42
 - `KOR_P_R100042_C100020` -> `KR-42`; intersects KR-41, KR-42
+- `KOR_P_R100043_C100016` -> `KR-41`; intersects KP-06, KR-41
 - `KOR_P_R100043_C100019` -> `KR-42`; intersects KR-41, KR-42
-- `KOR_P_R100044_C100017` -> `KR-41`; intersects KR-41, KR-42
+- `KOR_P_R100044_C100017` -> `KR-41`; intersects KP-06, KP-07, KR-41, KR-42
 - `KOR_P_R100044_C100018` -> `KR-41`; intersects KR-41, KR-42
 - `KOR_P_R100044_C100019` -> `KR-42`; intersects KR-41, KR-42
+- `KOR_P_R100045_C100018` -> `KR-42`; intersects KP-07, KR-42
+- `KOR_P_R100045_C100019` -> `KR-42`; intersects KP-07, KR-42
+- `KOR_P_R100045_C100020` -> `KR-42`; intersects KP-07, KR-42
+- `KOR_P_R100045_C100021` -> `KR-42`; intersects KP-07, KR-42
+- `KOR_P_R100046_C100022` -> `KR-42`; intersects KP-07, KR-42
+- `PRK_P_R100043_C100014` -> `KP-05`; intersects KP-05, KR-41
+- `PRK_P_R100043_C100015` -> `KP-06`; intersects KP-05, KP-06, KR-41
+- `PRK_P_R100044_C100014` -> `KP-05`; intersects KP-05, KP-06
+- `PRK_P_R100044_C100015` -> `KP-05`; intersects KP-05, KP-06
+- `PRK_P_R100045_C100013` -> `KP-06`; intersects KP-05, KP-06
+- `PRK_P_R100045_C100014` -> `KP-06`; intersects KP-05, KP-06
+- `PRK_P_R100045_C100015` -> `KP-06`; intersects KP-05, KP-06
+- `PRK_P_R100045_C100016` -> `KP-06`; intersects KP-06, KP-07
+- `PRK_P_R100045_C100017` -> `KP-07`; intersects KP-07, KR-41, KR-42
+- `PRK_P_R100046_C100013` -> `KP-06`; intersects KP-05, KP-06
+- `PRK_P_R100046_C100016` -> `KP-06`; intersects KP-06, KP-07
+- `PRK_P_R100046_C100021` -> `KP-07`; intersects KP-07, KR-42
+- `PRK_P_R100047_C100011` -> `KP-05`; intersects KP-02, KP-05
+- `PRK_P_R100047_C100012` -> `KP-05`; intersects KP-01, KP-02, KP-05, KP-06
+- `PRK_P_R100047_C100013` -> `KP-06`; intersects KP-01, KP-06
+- `PRK_P_R100047_C100014` -> `KP-06`; intersects KP-01, KP-06
+- `PRK_P_R100047_C100016` -> `KP-06`; intersects KP-06, KP-07
+- `PRK_P_R100047_C100021` -> `KP-07`; intersects KP-07, KR-42
+- `PRK_P_R100048_C100012` -> `KP-02`; intersects KP-01, KP-02
+- `PRK_P_R100048_C100013` -> `KP-01`; intersects KP-01, KP-02, KP-06
+- `PRK_P_R100048_C100014` -> `KP-01`; intersects KP-01, KP-06
+- `PRK_P_R100048_C100015` -> `KP-06`; intersects KP-01, KP-02, KP-06
+- `PRK_P_R100048_C100016` -> `KP-06`; intersects KP-02, KP-06
+- `PRK_P_R100048_C100017` -> `KP-06`; intersects KP-06, KP-07
+- `PRK_P_R100049_C100012` -> `KP-02`; intersects KP-01, KP-02
+- `PRK_P_R100049_C100013` -> `KP-01`; intersects KP-01, KP-02
+- `PRK_P_R100049_C100014` -> `KP-01`; intersects KP-01, KP-02, KP-06
+- `PRK_P_R100049_C100015` -> `KP-02`; intersects KP-01, KP-02, KP-06
+- `PRK_P_R100049_C100016` -> `KP-06`; intersects KP-02, KP-06
+- `PRK_P_R100049_C100017` -> `KP-07`; intersects KP-02, KP-06, KP-07, KP-08
+- `PRK_P_R100050_C100013` -> `KP-02`; intersects KP-01, KP-02
+- `PRK_P_R100050_C100014` -> `KP-02`; intersects KP-01, KP-02
+- `PRK_P_R100050_C100016` -> `KP-02`; intersects KP-02, KP-08
+- `PRK_P_R100050_C100017` -> `KP-08`; intersects KP-02, KP-07, KP-08
+- `PRK_P_R100050_C100018` -> `KP-07`; intersects KP-07, KP-08
+- `PRK_P_R100051_C100012` -> `KP-02`; intersects KP-02, KP-03
+- `PRK_P_R100051_C100016` -> `KP-08`; intersects KP-02, KP-08
+- `PRK_P_R100051_C100017` -> `KP-08`; intersects KP-07, KP-08
+- `PRK_P_R100051_C100018` -> `KP-08`; intersects KP-07, KP-08
+- `PRK_P_R100052_C100013` -> `KP-03`; intersects KP-02, KP-03
+- `PRK_P_R100052_C100014` -> `KP-02`; intersects KP-02, KP-03
+- `PRK_P_R100052_C100016` -> `KP-02`; intersects KP-02, KP-08
+- `PRK_P_R100052_C100017` -> `KP-08`; intersects KP-02, KP-08
+- `PRK_P_R100053_C100014` -> `KP-03`; intersects KP-02, KP-03
+- `PRK_P_R100053_C100015` -> `KP-02`; intersects KP-02, KP-03, KP-04
+- `PRK_P_R100053_C100016` -> `KP-02`; intersects KP-02, KP-08
+- `PRK_P_R100053_C100017` -> `KP-08`; intersects KP-02, KP-08
+- `PRK_P_R100054_C100014` -> `KP-03`; intersects KP-03, KP-04
+- `PRK_P_R100054_C100015` -> `KP-04`; intersects KP-03, KP-04
+- `PRK_P_R100054_C100016` -> `KP-04`; intersects KP-02, KP-04
+- `PRK_P_R100054_C100017` -> `KP-02`; intersects KP-02, KP-04
+- `PRK_P_R100054_C100018` -> `KP-08`; intersects KP-02, KP-08
+- `PRK_P_R100055_C100012` -> `KP-03`; intersects KP-03, KP-04
+- `PRK_P_R100055_C100013` -> `KP-04`; intersects KP-03, KP-04
+- `PRK_P_R100055_C100016` -> `KP-04`; intersects KP-02, KP-04
+- `PRK_P_R100055_C100017` -> `KP-08`; intersects KP-02, KP-04, KP-08
+- `PRK_P_R100055_C100019` -> `KP-08`; intersects KP-08, KP-10
+- `PRK_P_R100056_C100013` -> `KP-04`; intersects KP-03, KP-04
+- `PRK_P_R100056_C100017` -> `KP-04`; intersects KP-04, KP-08
+- `PRK_P_R100056_C100018` -> `KP-08`; intersects KP-04, KP-08
+- `PRK_P_R100056_C100020` -> `KP-10`; intersects KP-08, KP-10
+- `PRK_P_R100056_C100021` -> `KP-08`; intersects KP-08, KP-10
+- `PRK_P_R100056_C100024` -> `KP-08`; intersects KP-08, KP-09
+- `PRK_P_R100057_C100017` -> `KP-04`; intersects KP-04, KP-08
+- `PRK_P_R100057_C100018` -> `KP-08`; intersects KP-04, KP-08
+- `PRK_P_R100057_C100019` -> `KP-10`; intersects KP-08, KP-10
+- `PRK_P_R100057_C100021` -> `KP-10`; intersects KP-08, KP-10
+- `PRK_P_R100057_C100023` -> `KP-08`; intersects KP-08, KP-09
+- `PRK_P_R100058_C100018` -> `KP-04`; intersects KP-04, KP-08
+- `PRK_P_R100058_C100019` -> `KP-08`; intersects KP-04, KP-08, KP-10
+- `PRK_P_R100058_C100022` -> `KP-08`; intersects KP-08, KP-10
+- `PRK_P_R100058_C100023` -> `KP-08`; intersects KP-08, KP-09
+- `PRK_P_R100058_C100024` -> `KP-09`; intersects KP-08, KP-09
+- `PRK_P_R100059_C100017` -> `KP-04`; intersects KP-04, KP-10
+- `PRK_P_R100059_C100018` -> `KP-10`; intersects KP-04, KP-08, KP-10
+- `PRK_P_R100059_C100019` -> `KP-10`; intersects KP-08, KP-10
+- `PRK_P_R100059_C100022` -> `KP-10`; intersects KP-08, KP-10
+- `PRK_P_R100059_C100023` -> `KP-09`; intersects KP-08, KP-09, KP-10
+- `PRK_P_R100060_C100017` -> `KP-04`; intersects KP-04, KP-10
+- `PRK_P_R100060_C100023` -> `KP-10`; intersects KP-09, KP-10
+- `PRK_P_R100061_C100016` -> `KP-04`; intersects KP-04, KP-10
+- `PRK_P_R100061_C100017` -> `KP-10`; intersects KP-04, KP-10
+- `PRK_P_R100061_C100022` -> `KP-10`; intersects KP-09, KP-10
+- `PRK_P_R100061_C100023` -> `KP-09`; intersects KP-09, KP-10
+- `PRK_P_R100062_C100023` -> `KP-09`; intersects KP-09, KP-10
+- `PRK_P_R100063_C100022` -> `KP-10`; intersects KP-09, KP-10
+- `PRK_P_R100063_C100023` -> `KP-09`; intersects KP-09, KP-10
+- `PRK_P_R100064_C100027` -> `KP-09`; intersects KP-09, KP-13
+- `PRK_P_R100065_C100027` -> `KP-09`; intersects KP-09, KP-13
+- `PRK_P_R100066_C100028` -> `KP-09`; intersects KP-09, KP-13
 
 ## Manual overrides
 

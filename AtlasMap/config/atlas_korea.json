@@ -78,6 +78,40 @@
     "source_id": "10.5258/SOTON/WP00671",
     "policy": "un_adjusted_1km_zonal_sum_for_unresolved_units_only"
   },
+  "additional_countries": [
+    {
+      "country": {"iso3":"PRK","iso2":"KP","name_ko":"조선민주주의인민공화국","name_en":"Democratic People's Republic of Korea"},
+      "city_source": {
+        "path":"data/source/KP.zip","member":"KP.txt","provider":"GeoNames","country_code":"KP",
+        "minimum_population":100000,"capital_geoname_id":"1871859","canonical_aliases":{},"names_ko":{}
+      },
+      "tile_naming": {
+        "boundary_path":"data/source/geoBoundaries-PRK-ADM2.geojson","boundary_provider":"geoBoundaries gbOpen",
+        "boundary_year":2019,"alternate_names_path":"data/source/geonames-alternatenames-KP.zip",
+        "alternate_names_member":"KP.txt","minimum_tile_share":0.05,"require_same_admin1_owner":true,
+        "allocation_policy":"population_first_keep_best_representative_then_redistribute_duplicates",
+        "aggregate_admin1_codes":["KP-01","KP-13"],
+        "geonames_admin1_codes":{"01":"KP-04","03":"KP-08","06":"KP-05","07":"KP-06","09":"KP-07","11":"KP-03","12":"KP-01","13":"KP-10","15":"KP-02","17":"KP-09","18":"KP-13"}
+      },
+      "population_fallback": {
+        "path":"data/source/prk_ppp_2020_1km_Aggregated_UNadj.tif","provider":"WorldPop","year":2020,
+        "source_id":"10.5258/SOTON/WP00671","policy":"un_adjusted_1km_zonal_sum_for_unresolved_units_only"
+      },
+      "admin1": [
+        {"code":"KP-01","name_ko":"평양","name_en":"Pyongyang","target_tiles":5,"minimum_tiles":1},
+        {"code":"KP-02","name_ko":"평안남도","name_en":"South Pyongan","target_tiles":20,"minimum_tiles":1},
+        {"code":"KP-03","name_ko":"평안북도","name_en":"North Pyongan","target_tiles":20,"minimum_tiles":1},
+        {"code":"KP-04","name_ko":"자강도","name_en":"Chagang","target_tiles":27,"minimum_tiles":1},
+        {"code":"KP-05","name_ko":"황해남도","name_en":"South Hwanghae","target_tiles":14,"minimum_tiles":1},
+        {"code":"KP-06","name_ko":"황해북도","name_en":"North Hwanghae","target_tiles":13,"minimum_tiles":1},
+        {"code":"KP-07","name_ko":"강원도","name_en":"Kangwon","target_tiles":18,"minimum_tiles":1},
+        {"code":"KP-08","name_ko":"함경남도","name_en":"South Hamgyong","target_tiles":31,"minimum_tiles":1},
+        {"code":"KP-09","name_ko":"함경북도","name_en":"North Hamgyong","target_tiles":27,"minimum_tiles":1},
+        {"code":"KP-10","name_ko":"량강도","name_en":"Ryanggang","target_tiles":23,"minimum_tiles":1},
+        {"code":"KP-13","name_ko":"라선","name_en":"Rason","target_tiles":1,"minimum_tiles":1}
+      ]
+    }
+  ],
   "grid": {
     "orientation": "pointy_top",
     "target_area_km2": 605.21,
@@ -99,7 +133,14 @@
     "regular_edge_relative_tolerance": 0.001,
     "overlap_area_tolerance_m2": 1.0,
     "neighbor_shared_edge_tolerance_m": 5.0,
-    "coordinate_tolerance_m": 0.05
+    "coordinate_tolerance_m": 0.05,
+    "expected_country_tile_counts": {"KOR": 160},
+    "expected_admin_tile_counts": {
+      "KR-11":1,"KR-26":1,"KR-27":1,"KR-28":1,"KR-29":1,
+      "KR-30":1,"KR-31":1,"KR-41":16,"KR-42":33,"KR-43":12,
+      "KR-44":11,"KR-45":15,"KR-46":16,"KR-47":30,"KR-48":16,
+      "KR-49":3,"KR-50":1
+    }
   },
   "outputs": {
     "geopackage": "data/processed/Atlas_Korea.gpkg",

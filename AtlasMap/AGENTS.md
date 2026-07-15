@@ -5,7 +5,9 @@ project root. Every path stored in QGIS projects, configuration, scripts,
 reports, and metadata must be relative to this directory. Use
 `config/atlas_korea.json` as the only source for map design constants. Select
 country tiles by dominant country-or-ocean overlap with no fixed national tile
-count, then assign each Korean tile to its dominant admin overlap. Admin target
+count, then assign each selected tile only to its same-country dominant admin
+overlap. Build KOR and PRK simultaneously on one shared grid; a tile's
+`country_iso3`, dominant territory, and Admin-1 country must agree. Admin target
 counts are advisory; only configured minimum
 representation is mandatory. Never report completion unless build, validation,
 export, and preview generation all succeed.
@@ -14,6 +16,11 @@ Keep administrative ownership (`admin1_code`) independent from population-based
 tile type (`city_class`, `is_capital`). City type may override fill color but
 must never create city boundary lines; only differing admin ownership creates
 administrative borders.
+
+National ownership is a hard boundary. No override, Admin-1 assignment, naming
+unit, or population-based classification may transfer a tile between KOR and
+PRK. Shared KOR/PRK hex edges use `edge_type=country`; same-country ownership
+changes use `edge_type=admin`.
 
 Every tile display name must belong to the tile's `admin1_code`; this is a hard
 validation constraint. Assign each tile first to its highest-population

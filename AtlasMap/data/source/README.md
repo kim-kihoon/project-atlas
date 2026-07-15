@@ -81,3 +81,53 @@ filtered, repaired, and reprojected layers belong in
 - Use: Korean display names matched to GeoNames ADM2 identifiers. Untagged
   Hangul alternatives are accepted when no Korean-language-tagged value exists.
 - License: GeoNames data is provided under Creative Commons Attribution 4.0.
+
+## GeoNames Democratic People's Republic of Korea place data
+
+- Provider: GeoNames geographical database
+- URL: https://download.geonames.org/export/dump/KP.zip
+- Downloaded: 2026-07-15 (Asia/Seoul)
+- Original archive: `KP.zip`
+- SHA-256: `10bd99adafc7545e65e363e4ab85e84f436a6b328a0e6249b949b14f6833e611`
+- Archive member used: `KP.txt`
+- Use: the same population selection, validation, and recovery rules used for
+  the Republic of Korea; Pyongyang GeoNames ID `1871859` is the capital source.
+- License: GeoNames data is provided under Creative Commons Attribution 4.0.
+
+## geoBoundaries Democratic People's Republic of Korea ADM2
+
+- Provider: geoBoundaries, `gbOpen`
+- Source: https://www.geoboundaries.org/api/current/gbOpen/PRK/ADM2/
+- Downloaded: 2026-07-15 (Asia/Seoul)
+- Boundary reference year: 2019
+- Original file: `geoBoundaries-PRK-ADM2.geojson`
+- Feature count: 179
+- SHA-256: `4265ce501c4402a8bafdc27298c8462e41ed6f3170d50624503c3770b8ce91e9`
+- Use: city/county overlap geometry for North Korean tile display names.
+- License family: geoBoundaries `gbOpen`; redistribution review remains subject
+  to the provider metadata and the project owner's later license review.
+
+## GeoNames Democratic People's Republic of Korea alternate names
+
+- Provider: GeoNames geographical database
+- URL: https://download.geonames.org/export/dump/alternatenames/KP.zip
+- Downloaded: 2026-07-15 (Asia/Seoul)
+- Original archive: `geonames-alternatenames-KP.zip`
+- SHA-256: `a0550bda8394bb50e1e5117b7d744bcb6cbcda538405a3fd568f13b4020a23df`
+- Archive member used: `KP.txt`
+- Use: Korean display names matched to GeoNames identifiers when available.
+- License: GeoNames data is provided under Creative Commons Attribution 4.0.
+
+## WorldPop Democratic People's Republic of Korea population grid
+
+- Provider: WorldPop, University of Southampton
+- Dataset: North Korea 2020 unconstrained population count, 1 km, UN-adjusted
+- URL: https://hub.worldpop.org/geodata/summary?id=37063
+- Direct file: https://data.worldpop.org/GIS/Population/Global_2000_2020_1km_UNadj/2020/PRK/prk_ppp_2020_1km_Aggregated_UNadj.tif
+- DOI: `10.5258/SOTON/WP00671`
+- Downloaded: 2026-07-15 (Asia/Seoul)
+- Original file: `prk_ppp_2020_1km_Aggregated_UNadj.tif`
+- SHA-256: `dbabdc46b6994919f24ccdf9b3fd44ea7f4eb837dde93f35d39d88afb600b5c7`
+- Use: country-neutral zonal-sum fallback for unresolved North Korean naming
+  units, identical to the Republic of Korea workflow.
+- License: Creative Commons Attribution 4.0.
