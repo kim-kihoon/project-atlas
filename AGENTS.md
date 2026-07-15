@@ -199,6 +199,9 @@ center_x
 center_y
 neighbor_ids
 population
+population_year
+population_method
+population_source_id
 city_name_ko
 city_name_en
 city_class
@@ -213,8 +216,8 @@ source_year
 manual_override
 ```
 
-Do not publish a city-marker layer. Apply the global city classification to the
-final named tile only when trustworthy population data exists:
+Do not publish a city-marker layer. Every game tile stores exactly one integer
+population. Apply the global city classification directly to that tile value:
 
 - non-city: under 100,000 population, 1 district slot
 - city: 100,000 to under 1,000,000, 2 district slots
@@ -229,6 +232,13 @@ within the same admin-1 owner. Persist the recovery method and GeoNames ID so
 every correction is auditable. Do not add country-specific population patches.
 If both GeoNames matches fail, calculate a zonal sum from the configured
 WorldPop UN-adjusted 1 km raster and store its DOI as `population_source_id`.
+These naming-unit populations are internal name-allocation evidence, not game
+tile population. Do not publish `tile_name_population` on `korea_tiles`.
+
+For game population, use each country's WorldPop raster only as spatial
+weights. Scale those weights to the configured same-year UN World Population
+Prospects medium-variant national total, allocate integer residents by largest
+remainder, and validate that each country's tile sum matches exactly.
 
 Administrative ownership and city type are independent dimensions. A city tile
 inside a province keeps that province's `admin1_code`; for example, Yongin is a
@@ -241,9 +251,9 @@ city/county must belong to the tile's `admin1_code`. Assign every tile first to
 the highest-population overlapping same-owner unit. A duplicated unit keeps its
 largest-overlap representative; redistribute its other tiles to currently
 unrepresented same-owner units in population order, each choosing its
-largest-overlap vacancy. Any positive overlap is eligible. Derive capital/city
-fill class from the
-final named unit; city point data is an internal matching source only.
+largest-overlap vacancy. Any positive overlap is eligible. Derive city and
+metropolis fill solely from the tile's one game-population value. Capital status
+follows the final name and overrides fill color only.
 
 ## QGIS Project and Outputs
 

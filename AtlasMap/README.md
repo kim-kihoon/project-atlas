@@ -29,20 +29,23 @@ first goes to the highest-population same-owner city or county that overlaps it
 at all. A duplicated unit keeps the tile where it occupies the most area; its
 other tiles become vacancies. Unrepresented units then take compatible
 vacancies in population order, choosing their largest-overlap vacancy. There is
-no minimum overlap threshold. City class and
-capital color follow the final tile name, not an independently located point.
+no minimum overlap threshold. Display-name population is internal naming
+evidence only and is not copied into the game tile.
 When a capital naming unit occupies multiple tiles, all tiles carrying that
 capital name use the capital fill rather than only one representative tile.
 
 The map uses exactly four tile fill classes: ordinary administrative tile,
 light-blue city (100,000-999,999), dark-navy metropolis (1,000,000+), and
-gold capital. Ordinary tiles do not receive separate province colors. Population
-comes from the globally uniform GeoNames dump. A non-positive ADM2 population
-is automatically repaired from the largest positive populated-place record
-with the same admin-2 code, then by the same normalized name; the chosen method
-and source identifier are retained for audit. If GeoNames still has no positive
-value, the final fallback is a zonal sum from the globally consistent 2020
-WorldPop 1 km UN-adjusted population raster.
+gold capital. Each tile stores exactly one integer population. The 2020
+WorldPop raster supplies spatial weights, which are scaled to the configured
+2026 UN World Population Prospects national total and reconciled with the
+largest-remainder method. Consequently, every country's tile populations sum
+to its UN WPP total exactly. A tile is a city at 100,000 residents and a
+metropolis at 1,000,000 residents, regardless of its display name. Capital fill
+overrides the population color without changing the stored population.
+
+GeoNames and naming-unit WorldPop sums remain internal inputs for selecting
+display names. They are not alternative game-population fields.
 Administrative borders are the complete topology-derived outlines of same-owner
 tile groups. Every hex edge is keyed explicitly: edges shared by tiles with the
 same `admin1_code` cancel, while different-owner and exterior edges remain and

@@ -1,5 +1,22 @@
 # Source data
 
+## United Nations World Population Prospects 2024
+
+- Provider: United Nations, Department of Economic and Social Affairs,
+  Population Division
+- Dataset: World Population Prospects 2024, total population by sex
+- URL: https://population.un.org/wpp/
+- Direct file: https://population.un.org/wpp/assets/Excel%20Files/1_Indicator%20(Standard)/CSV_FILES/WPP2024_TotalPopulationBySex.csv.gz
+- Downloaded: 2026-07-15 (Asia/Seoul)
+- Original file: `WPP2024_TotalPopulationBySex.csv.gz`
+- SHA-256: `66b84489fd7875b62de9b40d960b803b8c8439367c98deab89c2f770970925b9`
+- Selection: `Variant = Medium`, `Time = 2026`; KOR 51,600,388 and PRK
+  26,633,691 residents after converting the source's thousands to persons.
+- Use: exact national game-population totals. WorldPop supplies only the
+  relative spatial weights between tiles.
+- License: United Nations data terms apply; project-specific redistribution
+  review remains deferred by the project owner.
+
 ## Natural Earth Admin 1 - States, Provinces
 
 - Source: Natural Earth, 1:10m Cultural Vectors, Admin 1

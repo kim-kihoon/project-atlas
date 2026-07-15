@@ -1,8 +1,10 @@
 """Release-gate validation for the Atlas Korea QGIS map."""
 
 from collections import Counter
+import csv
 from datetime import datetime, timezone
 import json
+import gzip
 import math
 from pathlib import Path
 import re
@@ -32,6 +34,25 @@ def resolve(root, relative_path):
     if root != path and root not in path.parents:
         raise QgsProcessingException(f"Path escapes project root: {relative_path}")
     return path
+
+
+def load_national_population_totals(root, settings, country_iso3s):
+    model = settings["population_model"]
+    path = resolve(root, model["national_totals_path"])
+    year = int(model["national_totals_year"])
+    variant = str(model["national_totals_variant"])
+    multiplier = 1000 if model.get("national_totals_units") == "thousands" else 1
+    totals = {}
+    with gzip.open(path, "rt", encoding="utf-8-sig", newline="") as handle:
+        for row in csv.DictReader(handle):
+            iso3 = str(row.get("ISO3_code") or "")
+            if (
+                iso3 in country_iso3s
+                and str(row.get("Variant") or "") == variant
+                and int(row.get("Time") or -1) == year
+            ):
+                totals[iso3] = int(round(float(row["PopTotal"]) * multiplier))
+    return totals
 
 
 def configured_countries(settings):
@@ -123,6 +144,9 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             admin["code"]: item["country"]["iso3"]
             for item in country_settings for admin in item["admin1"]
         }
+        national_population_totals = load_national_population_totals(
+            root, settings, country_iso3s
+        )
         validation = settings["validation"]
         gpkg = resolve(root, settings["outputs"]["geopackage"])
         project_path = resolve(root, settings["outputs"]["project"])
@@ -286,7 +310,6 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
 
         required_naming_fields = {
             "tile_name_code", "tile_name_ko", "tile_name_en", "tile_name_method",
-            "tile_name_population", "tile_name_population_method",
             "tile_name_overlap_km2", "map_class",
         }
         missing_naming_fields = sorted(required_naming_fields - set(layer.fields().names()))
@@ -420,13 +443,57 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         city_min = int(settings["city_classification"]["city_population_min"])
         metropolis_min = int(settings["city_classification"]["metropolis_population_min"])
         check(
-            "Global city-source and classification thresholds agree",
-            city_min == 100000 and all(
-                int(item["city_source"]["minimum_population"]) == city_min
-                for item in country_settings
-            ),
-            f"city={city_min}, sources="
-            f"{[item['city_source']['minimum_population'] for item in country_settings]}",
+            "Global tile-population classification thresholds",
+            city_min == 100000 and metropolis_min == 1000000,
+            f"city={city_min}, metropolis={metropolis_min}",
+        )
+        required_population_fields = {
+            "population", "population_year", "population_method", "population_source_id",
+        }
+        missing_population_fields = sorted(
+            required_population_fields - set(layer.fields().names())
+        )
+        check(
+            "Single game-tile population model fields",
+            not missing_population_fields,
+            f"missing={missing_population_fields}",
+        )
+        legacy_population_fields = sorted(
+            {"tile_name_population", "tile_name_population_method"}
+            & set(layer.fields().names())
+        )
+        check(
+            "No second naming-unit population on game tiles",
+            not legacy_population_fields,
+            f"legacy={legacy_population_fields}",
+        )
+        population_year = int(settings["population_model"]["national_totals_year"])
+        population_method = str(settings["population_model"]["allocation_method"])
+        population_source_id = str(settings["population_model"]["source_id"])
+        invalid_tile_populations = [
+            str(tile["tile_id"]) for tile in features
+            if int(tile["population"] or 0) < 0
+            or int(tile["population_year"] or 0) != population_year
+            or str(tile["population_method"] or "") != population_method
+            or str(tile["population_source_id"] or "") != population_source_id
+        ]
+        check(
+            "Tile populations are non-negative integers with provenance",
+            not invalid_tile_populations,
+            f"invalid={invalid_tile_populations}",
+        )
+        actual_population_totals = Counter()
+        for tile in features:
+            actual_population_totals[str(tile["country_iso3"])] += int(tile["population"] or 0)
+        population_total_mismatches = {
+            iso3: (actual_population_totals.get(iso3, 0), expected)
+            for iso3, expected in national_population_totals.items()
+            if actual_population_totals.get(iso3, 0) != expected
+        }
+        check(
+            "Tile populations exactly reconcile to UN WPP national totals",
+            not population_total_mismatches,
+            f"mismatches={population_total_mismatches}",
         )
         capital_tiles = [tile for tile in features if str(tile["map_class"] or "") == "capital"]
         capital_countries = Counter(str(tile["country_iso3"] or "") for tile in capital_tiles)
@@ -452,19 +519,26 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             tile_id = str(tile["tile_id"])
             map_class = str(tile["map_class"] or "")
             population = int(tile["population"] or 0)
-            if map_class in {"city", "metropolis", "capital"}:
-                expected_city_class = "metropolis" if population >= metropolis_min else "city"
-                expected_map_class = "capital" if bool(tile["is_capital"]) else expected_city_class
-                if (
-                    population < city_min
-                    or str(tile["tile_name_ko"] or "") != str(tile["city_name_ko"] or "")
-                    or str(tile["city_class"] or "") != expected_city_class
-                    or map_class != expected_map_class
-                ):
-                    tile_city_mismatches.append(tile_id)
-            elif map_class != "admin" or bool(tile["is_capital"]):
+            expected_city_class = (
+                "metropolis" if population >= metropolis_min
+                else "city" if population >= city_min else ""
+            )
+            expected_map_class = (
+                "capital" if bool(tile["is_capital"])
+                else expected_city_class or "admin"
+            )
+            expected_named = bool(expected_city_class or bool(tile["is_capital"]))
+            if (
+                str(tile["city_class"] or "") != expected_city_class
+                or map_class != expected_map_class
+                or (
+                    expected_named
+                    and str(tile["tile_name_ko"] or "") != str(tile["city_name_ko"] or "")
+                )
+                or (not expected_named and str(tile["city_name_ko"] or ""))
+            ):
                 tile_city_mismatches.append(tile_id)
-        check("City class follows final same-owner tile name", not tile_city_mismatches,
+        check("City class follows each tile's single population", not tile_city_mismatches,
               f"mismatches={tile_city_mismatches}")
         actual_map_classes = {str(tile["map_class"] or "") for tile in features}
         expected_map_classes = {"admin", "city", "metropolis", "capital"}

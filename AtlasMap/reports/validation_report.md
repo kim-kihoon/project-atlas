@@ -1,6 +1,6 @@
 # Atlas Korean Peninsula validation report
 
-Generated: 2026-07-15T03:11:51.270420+00:00
+Generated: 2026-07-15T10:37:12.477507+00:00
 
 Overall result: **PASS**
 
@@ -32,10 +32,14 @@ Overall result: **PASS**
 | Maximum-overlap default names | PASS | mismatches=[] |
 | Unique representatives after redistribution | PASS | invalid=[], duplicates=[] |
 | City marker layer removed | PASS | layer_valid=False |
-| Global city-source and classification thresholds agree | PASS | city=100000, sources=[100000, 100000] |
+| Global tile-population classification thresholds | PASS | city=100000, metropolis=1000000 |
+| Single game-tile population model fields | PASS | missing=[] |
+| No second naming-unit population on game tiles | PASS | legacy=[] |
+| Tile populations are non-negative integers with provenance | PASS | invalid=[] |
+| Tile populations exactly reconcile to UN WPP national totals | PASS | mismatches={} |
 | Every country has capital tiles | PASS | countries={'KOR': 1, 'PRK': 4} |
 | Every tile named for a capital uses the capital class | PASS | invalid=[] |
-| City class follows final same-owner tile name | PASS | mismatches=[] |
+| City class follows each tile's single population | PASS | mismatches=[] |
 | Exactly four tile color classes | PASS | actual=['admin', 'capital', 'city', 'metropolis'] |
 | Metropolis fill darker than city fill | PASS | city=#4aa3d8, metropolis=#173f6f |
 | Same-owner groups have complete topology-derived outlines | PASS | edges=526, invalid=[], topology=[], missing=[] |

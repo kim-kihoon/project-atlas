@@ -3,6 +3,7 @@
 from collections import Counter
 from datetime import datetime, timezone
 import csv
+import gzip
 import io
 import json
 import math
@@ -74,6 +75,102 @@ def configured_countries(settings):
         "admin1": settings["admin1"],
     }
     return [primary, *settings.get("additional_countries", [])]
+
+
+def load_national_population_totals(root, settings, country_iso3s):
+    model = settings["population_model"]
+    source_path = resolve(root, model["national_totals_path"])
+    if not source_path.exists():
+        raise QgsProcessingException(
+            f"National population source does not exist: {source_path}"
+        )
+    year = int(model["national_totals_year"])
+    variant = str(model["national_totals_variant"])
+    multiplier = 1000 if model.get("national_totals_units") == "thousands" else 1
+    totals = {}
+    with gzip.open(source_path, "rt", encoding="utf-8-sig", newline="") as handle:
+        for row in csv.DictReader(handle):
+            iso3 = str(row.get("ISO3_code") or "")
+            if (
+                iso3 not in country_iso3s
+                or str(row.get("Variant") or "") != variant
+                or int(row.get("Time") or -1) != year
+            ):
+                continue
+            totals[iso3] = int(round(float(row["PopTotal"]) * multiplier))
+    missing = sorted(country_iso3s - set(totals))
+    if missing or any(value <= 0 for value in totals.values()):
+        raise QgsProcessingException(
+            f"Missing or invalid national population totals: {missing}, totals={totals}"
+        )
+    return totals
+
+
+def allocate_tile_populations(
+    root, country_settings, candidates, selected_by_country,
+    target_crs, context, national_totals,
+):
+    """Scale WorldPop spatial weights to exact national totals using largest remainder."""
+    result = {}
+    raw_sums = {}
+    for item in country_settings:
+        iso3 = item["country"]["iso3"]
+        raster_path = resolve(root, item["population_fallback"]["path"])
+        if not raster_path.exists():
+            raise QgsProcessingException(
+                f"Population weight raster does not exist for {iso3}: {raster_path}"
+            )
+        fields = QgsFields()
+        fields.append(QgsField("candidate_index", QVariant.Int))
+        layer = memory_layer("Polygon", target_crs, f"{iso3}_population_tiles", fields)
+        features = []
+        for index in sorted(selected_by_country[iso3]):
+            feature = QgsFeature(layer.fields())
+            feature.setGeometry(candidates[index]["geometry"])
+            feature.setAttribute("candidate_index", index)
+            features.append(feature)
+        layer.dataProvider().addFeatures(features)
+        zonal = processing.run(
+            "native:zonalstatisticsfb",
+            {
+                "INPUT": layer,
+                "INPUT_RASTER": str(raster_path),
+                "RASTER_BAND": 1,
+                "COLUMN_PREFIX": "wp_",
+                "STATISTICS": [1],
+                "OUTPUT": "memory:",
+            },
+            context=context,
+        )["OUTPUT"]
+        weights = {
+            int(feature["candidate_index"]): max(0.0, float(feature["wp_sum"] or 0.0))
+            for feature in zonal.getFeatures()
+        }
+        total_weight = sum(weights.values())
+        if total_weight <= 0:
+            raise QgsProcessingException(f"No positive population weights for {iso3}")
+        national_total = int(national_totals[iso3])
+        exact = {
+            index: national_total * weight / total_weight
+            for index, weight in weights.items()
+        }
+        allocated = {index: math.floor(value) for index, value in exact.items()}
+        remainder = national_total - sum(allocated.values())
+        order = sorted(
+            exact,
+            key=lambda index: (
+                -(exact[index] - allocated[index]), candidates[index]["tile_id"],
+            ),
+        )
+        for index in order[:remainder]:
+            allocated[index] += 1
+        if sum(allocated.values()) != national_total:
+            raise QgsProcessingException(
+                f"Population allocation does not reconcile for {iso3}"
+            )
+        result.update(allocated)
+        raw_sums[iso3] = total_weight
+    return result, raw_sums
 
 
 def make_hexagon(cx, cy, side, orientation):
@@ -741,6 +838,9 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             admin["code"]: item["country"]["iso3"]
             for item in country_settings for admin in item["admin1"]
         }
+        national_population_totals = load_national_population_totals(
+            root, settings, country_iso3s
+        )
 
         source_path = resolve(root, settings["source"]["path"])
         gpkg_path = resolve(root, settings["outputs"]["geopackage"])
@@ -1058,22 +1158,17 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             unique_unit_tiles.update(unit_tiles)
         naming_unit_by_code = {unit["unit_code"]: unit for unit in naming_units}
 
-        city_by_unit_code = {}
-        for unit in naming_units:
-            population = int(unit["population"] or 0)
-            is_capital = unit["unit_code"] in capital_unit_codes
-            if population < int(city_classes["city_population_min"]) and not is_capital:
-                continue
-            city_class = (
-                "metropolis" if population >= int(city_classes["metropolis_population_min"])
-                else "city"
+        tile_populations, raw_population_sums = allocate_tile_populations(
+            root, country_settings, candidates, selected_by_country,
+            target_crs, context, national_population_totals,
+        )
+        feedback.pushInfo(
+            "Allocated exact national populations: "
+            + ", ".join(
+                f"{iso3}={national_population_totals[iso3]:,}"
+                for iso3 in sorted(national_population_totals)
             )
-            city_by_unit_code[unit["unit_code"]] = {
-                "unit_code": unit["unit_code"], "admin1_code": unit["admin1_code"],
-                "name_ko": unit["name_ko"], "name_en": unit["name_en"],
-                "population": population, "city_class": city_class,
-                "is_capital": is_capital,
-            }
+        )
 
         candidate_fields = QgsFields()
         for name, kind in (
@@ -1142,13 +1237,14 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             ("land_ratio", QVariant.Double), ("is_coastal", QVariant.Bool),
             ("center_x", QVariant.Double), ("center_y", QVariant.Double),
             ("neighbor_ids", QVariant.String), ("population", QVariant.LongLong),
+            ("population_year", QVariant.Int),
+            ("population_method", QVariant.String),
+            ("population_source_id", QVariant.String),
             ("city_name_ko", QVariant.String), ("city_name_en", QVariant.String),
             ("city_class", QVariant.String), ("is_capital", QVariant.Bool),
             ("map_class", QVariant.String),
             ("tile_name_code", QVariant.String), ("tile_name_ko", QVariant.String),
             ("tile_name_en", QVariant.String), ("tile_name_method", QVariant.String),
-            ("tile_name_population", QVariant.LongLong),
-            ("tile_name_population_method", QVariant.String),
             ("tile_name_overlap_km2", QVariant.Double),
             ("district_slots", QVariant.Int), ("district_1", QVariant.String),
             ("district_2", QVariant.String), ("district_3", QVariant.String),
@@ -1169,11 +1265,17 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             naming_code = tile_name_assignments[index]
             naming_unit = naming_unit_by_code[naming_code]
             naming_overlap = tile_name_overlaps[index].get(naming_code, 0.0)
-            city = city_by_unit_code.get(naming_code)
-            city_class = city["city_class"] if city else None
+            population = int(tile_populations[index])
+            city_class = (
+                "metropolis"
+                if population >= int(city_classes["metropolis_population_min"])
+                else "city"
+                if population >= int(city_classes["city_population_min"])
+                else None
+            )
             # Capital status follows the final tile name. If the capital naming
             # unit owns several tiles, every one of them uses the capital class.
-            is_capital = bool(city and city["is_capital"])
+            is_capital = naming_code in capital_unit_codes
             district_slots = 3 if city_class == "metropolis" else 2 if city_class == "city" else 1
             overlap = candidate["overlaps"].get(code, 0.0)
             feature = QgsFeature(tile_layer.fields())
@@ -1187,19 +1289,18 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 "is_coastal": candidate["land_area"] / candidate["geometry"].area() < 0.999,
                 "center_x": candidate["cx"], "center_y": candidate["cy"],
                 "neighbor_ids": json.dumps(neighbors[candidate["tile_id"]], separators=(",", ":")),
-                "population": city["population"] if city else None,
-                "city_name_ko": city["name_ko"] if city else None,
-                "city_name_en": city["name_en"] if city else None,
+                "population": population,
+                "population_year": int(settings["population_model"]["national_totals_year"]),
+                "population_method": settings["population_model"]["allocation_method"],
+                "population_source_id": settings["population_model"]["source_id"],
+                "city_name_ko": naming_unit["name_ko"] if city_class or is_capital else None,
+                "city_name_en": naming_unit["name_en"] if city_class or is_capital else None,
                 "city_class": city_class, "is_capital": is_capital,
                 "map_class": "capital" if is_capital else city_class or "admin",
                 "tile_name_code": naming_code,
                 "tile_name_ko": naming_unit["name_ko"],
                 "tile_name_en": naming_unit["name_en"],
                 "tile_name_method": tile_name_methods[index],
-                "tile_name_population": (
-                    naming_unit["population"] if naming_unit["population_known"] else None
-                ),
-                "tile_name_population_method": naming_unit["population_method"],
                 "tile_name_overlap_km2": naming_overlap / 1_000_000.0,
                 "district_slots": district_slots,
                 "source_year": int(settings["source"]["source_year"]),
@@ -1489,29 +1590,46 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 f"{sum(1 for method in tile_name_methods.values() if method == 'owner_nearest_fallback')}",
             ]
         )
-        city_counts = Counter(city["city_class"] for city in city_by_unit_code.values())
         population_method_counts = Counter(
             unit["population_method"] for unit in naming_units
         )
         tile_class_counts = Counter(
-            "capital" if bool(city_by_unit_code.get(tile_name_assignments[index], {}).get("is_capital"))
-            else city_by_unit_code[tile_name_assignments[index]]["city_class"]
-            if tile_name_assignments[index] in city_by_unit_code else "admin"
+            "capital" if tile_name_assignments[index] in capital_unit_codes
+            else "metropolis"
+            if tile_populations[index] >= int(city_classes["metropolis_population_min"])
+            else "city"
+            if tile_populations[index] >= int(city_classes["city_population_min"])
+            else "admin"
             for index in selected_indexes
         )
+        country_population_sums = Counter()
+        for index in selected_indexes:
+            country_population_sums[candidates[index]["dominant_territory"]] += (
+                tile_populations[index]
+            )
         report_lines.extend(
             [
                 "", "## Population-based city classes", "",
-                "City class changes tile fill only; no city-marker layer is published.", "",
-                f"- Qualifying metropolis naming units: {city_counts.get('metropolis', 0)}",
-                f"- Qualifying city naming units: {city_counts.get('city', 0)}",
+                "Each game tile stores one integer population. City class is derived only from that value.",
+                "WorldPop supplies spatial weights; UN WPP supplies the exact national total.", "",
                 f"- Capital tiles: {tile_class_counts.get('capital', 0)}",
                 f"- Metropolis tiles: {tile_class_counts.get('metropolis', 0)}",
                 f"- City tiles: {tile_class_counts.get('city', 0)}",
+            ]
+        )
+        for iso3 in sorted(national_population_totals):
+            report_lines.append(
+                f"- {iso3}: tile sum {country_population_sums[iso3]:,}; "
+                f"UN WPP target {national_population_totals[iso3]:,}; "
+                f"raw WorldPop weight sum {raw_population_sums[iso3]:,.2f}"
+            )
+        report_lines.extend(
+            [
+                "", "Naming-unit populations remain internal allocation evidence only:",
                 f"- GeoNames ADM2 populations: {population_method_counts.get('geonames_adm2', 0)}",
                 f"- GeoNames populated-place recoveries: "
                 f"{sum(count for method, count in population_method_counts.items() if method.startswith('geonames_populated_place'))}",
-                f"- WorldPop zonal recoveries: "
+                f"- WorldPop naming-unit recoveries: "
                 f"{population_method_counts.get('worldpop_un_adjusted_zonal_sum', 0)}",
             ]
         )

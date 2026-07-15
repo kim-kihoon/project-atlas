@@ -72,6 +72,15 @@
       "city": "#4aa3d8"
     }
   },
+  "population_model": {
+    "national_totals_path": "data/source/WPP2024_TotalPopulationBySex.csv.gz",
+    "national_totals_provider": "United Nations World Population Prospects 2024",
+    "national_totals_variant": "Medium",
+    "national_totals_year": 2026,
+    "national_totals_units": "thousands",
+    "source_id": "WPP2024",
+    "allocation_method": "worldpop_spatial_weights_scaled_to_un_wpp_total_largest_remainder"
+  },
   "population_fallback": {
     "path": "data/source/kor_ppp_2020_1km_Aggregated_UNadj.tif",
     "provider": "WorldPop",

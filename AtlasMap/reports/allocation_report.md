@@ -1,6 +1,6 @@
 # Atlas Korean Peninsula tile allocation report
 
-Generated: 2026-07-15T03:11:50.069950+00:00
+Generated: 2026-07-15T10:37:09.779509+00:00
 
 - Orientation: `pointy_top`
 - Final tiles: **364**
@@ -68,16 +68,19 @@ Generated: 2026-07-15T03:11:50.069950+00:00
 
 ## Population-based city classes
 
-City class changes tile fill only; no city-marker layer is published.
+Each game tile stores one integer population. City class is derived only from that value.
+WorldPop supplies spatial weights; UN WPP supplies the exact national total.
 
-- Qualifying metropolis naming units: 12
-- Qualifying city naming units: 150
 - Capital tiles: 5
 - Metropolis tiles: 10
-- City tiles: 160
+- City tiles: 112
+- KOR: tile sum 51,600,388; UN WPP target 51,600,388; raw WorldPop weight sum 48,096,891.39
+- PRK: tile sum 26,633,691; UN WPP target 26,633,691; raw WorldPop weight sum 23,934,747.80
+
+Naming-unit populations remain internal allocation evidence only:
 - GeoNames ADM2 populations: 147
 - GeoNames populated-place recoveries: 31
-- WorldPop zonal recoveries: 159
+- WorldPop naming-unit recoveries: 159
 
 ## Boundary tiles
 

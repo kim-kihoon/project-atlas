@@ -27,20 +27,25 @@ validation constraint. Assign each tile first to its highest-population
 overlapping same-owner unit. A duplicated unit keeps its largest-overlap
 representative; redistribute its other tiles to unrepresented compatible units
 in population order. Any positive overlap is eligible. Derive `city_class`
-and capital color from the final named unit. Do not publish or display city
+solely from the tile's one game-population value. Capital color follows the
+final name and overrides the population color. Do not publish or display city
 marker points; place data remains an internal classification source.
 
 Use the same GeoNames dump schema in every country. A naming unit population
 must be a positive integer. When an ADM2 record is zero, negative, or invalid,
 recover it first from the largest positive populated-place record sharing its
 admin-2 code, then from one sharing its normalized name and admin-1 owner.
-Persist the recovery method and GeoNames identifier. Classify a final named
-tile as `city` at 100,000 population and `metropolis` at 1,000,000 population;
-capital status remains independent of population.
+Persist the recovery method and GeoNames identifier. These values guide naming
+only; do not expose a second naming-unit population on the game tile.
 
 If neither GeoNames recovery produces a positive value, use the configured
 WorldPop UN-adjusted 1 km raster zonal sum for the naming-unit polygon. Store
 the WorldPop DOI as `population_source_id`; never insert a manual country value.
+
+Allocate game population separately: WorldPop provides tile weights and the
+configured UN WPP medium-variant total provides the exact national sum. Use
+largest remainder for integer allocation. Classify each tile as `city` at
+100,000 and `metropolis` at 1,000,000 from that single value.
 
 Use exactly four tile fill classes: `admin`, `city`, `metropolis`, and
 `capital`. All ordinary administrative tiles share one fill color. Make
