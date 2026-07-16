@@ -6,44 +6,76 @@
     "rules_document": "GLOBAL_MAP_RULES.md",
     "readiness_report": "reports/global_readiness_report.md",
     "canonical_boundary_snapshot": {
-      "candidate_provider": "World Bank Official Boundaries",
-      "candidate_status": "rejected",
-      "candidate_version": "3",
-      "candidate_modified_date": "2026-07-14",
+      "candidate_provider": "geoBoundaries CGAZ",
+      "candidate_status": "accepted",
+      "candidate_version": "6.0.0",
+      "candidate_modified_date": "2023-09-13",
       "candidate_report": "reports/global_boundary_candidate_report.md",
-      "candidate_source_directory": "data/source/world_bank_official_boundaries_v3_2026_07_14",
-      "candidate_rejection_reasons": [
-        "KOR ADM1 has 15 units instead of the current 17",
-        "KOR ADM2 contains no usable city or county units",
-        "PRK Sangwon is assigned to Pyongyang rather than post-2010 North Hwanghae"
-      ],
-      "next_candidate": {
-        "provider": "geoBoundaries gbOpen CGAZ",
-        "release": "6.0.0 / pinned releaseData commit 9469f09",
-        "status": "screening",
-        "sample_directory": "data/source/geoboundaries_9469f09_candidate",
-        "screening_report": "reports/global_boundary_candidate_report.md"
+      "candidate_source_directory": "data/source/geoboundaries_cgaz_6_0_0",
+      "candidate_rejection_reasons": [],
+      "provider": "geoBoundaries Comprehensive Global Administrative Zones (CGAZ)",
+      "version": "6.0.0",
+      "commit": "1289e40e366c7b320550be1ee0614a9472d572d4",
+      "reference_year": "mixed represented years; frozen build 2023-09-13",
+      "license": "attribution required; geoBoundaries CC BY 4.0 / ODbL source terms",
+      "sha256": {
+        "ADM0": "95761885d55abf850d75d6835779a6e9fae966b1fa1ad5534f40865e5b71180c",
+        "ADM1": "1571b7bfc8a64940ad8c380a91d997a6d9a9a78090b235aced00eb44a2c0106e",
+        "ADM2": "06cadadae2f1e8fab89dec62365a850b663da280df712c39c96e3c9f33a49696"
       },
-      "provider": null,
-      "version": null,
-      "reference_year": null,
-      "license": null,
-      "sha256": null,
       "required_levels": ["ADM0", "ADM1", "ADM2"],
-      "adm0_path": null,
-      "adm1_path": null,
-      "adm2_path": null
+      "adm0_path": "data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM0.zip",
+      "adm0_member": "geoBoundariesCGAZ_ADM0.shp",
+      "adm1_path": "data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM1.zip",
+      "adm1_member": "geoBoundariesCGAZ_ADM1.shp",
+      "adm2_path": "data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM2.zip",
+      "adm2_member": "geoBoundariesCGAZ_ADM2.shp",
+      "selection_policy": "global_snapshot_consistency_over_country_specific_recency"
     },
     "global_grid": {
       "crs_or_dggs": null,
-      "tile_id_scheme": null,
+      "tile_id_scheme": "ATLAS_{orientation_initial}_R{signed_grid_row}_C{signed_grid_col}",
       "ownership_independent_tile_ids": true,
       "world_wrap_policy": null,
       "polar_policy": null
     },
     "country_registry_path": null,
     "require_spatial_indexes": true,
-    "require_coordinate_neighbor_lookup": true
+    "require_coordinate_neighbor_lookup": true,
+    "hierarchy_coherence_audit": {
+      "policy": "country_neutral_report_only_no_automatic_repair",
+      "prototype_report": "reports/korea_cgaz_hierarchy_consistency_audit.md",
+      "automated_global_audit": false
+    }
+  },
+  "administrative_reference": {
+    "scenario_reference_date": null,
+    "policy": "canonical_snapshot_consistency_over_contemporary_accuracy",
+    "enforcement": "report_only",
+    "audit_report": "reports/korea_administrative_reference_audit.md",
+    "required_admin1_units": [
+      {
+        "country_iso3": "PRK",
+        "admin1_code": "KP-14",
+        "name_en": "Nampo",
+        "effective_from": "2010-01-01"
+      },
+      {
+        "country_iso3": "PRK",
+        "admin1_code": "KP-15",
+        "name_en": "Kaesong",
+        "effective_from": "2019-01-01"
+      }
+    ],
+    "known_memberships": [
+      {
+        "country_iso3": "PRK",
+        "unit_name_en": "Sangwon",
+        "expected_admin1_code": "KP-06",
+        "effective_from": "2010-01-01",
+        "evidence": "Sangwon transferred from Pyongyang to North Hwanghae in 2010 and was not restored with Kangnam in 2011"
+      }
+    ]
   },
   "labeling": {
     "tile_name_min_scale": 1600000,
@@ -58,22 +90,33 @@
   },
   "crs": "EPSG:5179",
   "source": {
-    "path": "data/source/natural_earth_admin1/ne_10m_admin_1_states_provinces.shp",
-    "country_filter_field": "adm0_a3",
+    "path": "data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM0.zip",
+    "archive_member": "geoBoundariesCGAZ_ADM0.shp",
+    "country_filter_field": "shapeGroup",
+    "country_code_field": "shapeGroup",
     "country_filter_value": "KOR",
-    "source_year": 2022
+    "source_year": 2023,
+    "snapshot_version": "CGAZ-6.0.0"
   },
   "admin1_source": {
-    "path": "data/source/sgis_2025/admin1/bnd_sido_00_2025_2Q.shp",
-    "code_field": "SIDO_CD",
-    "name_field": "SIDO_NM",
-    "source_year": 2025,
+    "path": "data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM1.zip",
+    "archive_member": "geoBoundariesCGAZ_ADM1.shp",
+    "filter_field": "shapeGroup",
+    "filter_value": "KOR",
+    "code_field": "shapeID",
+    "name_field": "shapeName",
+    "source_year": 2021,
+    "snapshot_version": "CGAZ-6.0.0",
     "code_map": {
-      "11":"KR-11", "21":"KR-26", "22":"KR-27", "23":"KR-28",
-      "24":"KR-29", "25":"KR-30", "26":"KR-31", "29":"KR-50",
-      "31":"KR-41", "32":"KR-42", "33":"KR-43", "34":"KR-44",
-      "35":"KR-45", "36":"KR-46", "37":"KR-47", "38":"KR-48",
-      "39":"KR-49"
+      "68945753B55100681051852":"KR-11", "68945753B18996591190839":"KR-26",
+      "68945753B94077674833362":"KR-27", "68945753B50642023031709":"KR-28",
+      "68945753B46109248456415":"KR-29", "68945753B85435209225479":"KR-30",
+      "68945753B85001375391280":"KR-31", "68945753B58129180850627":"KR-50",
+      "68945753B43731078897969":"KR-41", "68945753B85747362819570":"KR-42",
+      "68945753B59172752195743":"KR-43", "68945753B70752081047384":"KR-44",
+      "68945753B82824634329413":"KR-45", "68945753B5424648896322":"KR-46",
+      "68945753B22494711915469":"KR-47", "68945753B56309283475968":"KR-48",
+      "68945753B53856725499604":"KR-49"
     }
   },
   "city_source": {
@@ -94,8 +137,12 @@
     }
   },
   "tile_naming": {
-    "boundary_path": "data/source/geoBoundaries-KOR-ADM2.geojson",
-    "boundary_provider": "geoBoundaries gbOpen",
+    "boundary_path": "data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM2.zip",
+    "boundary_archive_member": "geoBoundariesCGAZ_ADM2.shp",
+    "boundary_filter_field": "shapeGroup",
+    "boundary_filter_value": "KOR",
+    "boundary_provider": "geoBoundaries CGAZ 6.0.0",
+    "snapshot_version": "CGAZ-6.0.0",
     "boundary_year": 2020,
     "alternate_names_path": "data/source/geonames-alternatenames-KR.zip",
     "alternate_names_member": "KR.txt",
@@ -158,22 +205,35 @@
     {
       "country": {"iso3":"PRK","iso2":"KP","name_ko":"조선민주주의인민공화국","name_en":"Democratic People's Republic of Korea"},
       "admin1_source": {
-        "path":"data/source/natural_earth_admin1/ne_10m_admin_1_states_provinces.shp",
-        "filter_field":"adm0_a3","filter_value":"PRK",
-        "code_field":"iso_3166_2","name_field":"name_en","source_year":2022
+        "path":"data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM1.zip",
+        "archive_member":"geoBoundariesCGAZ_ADM1.shp",
+        "filter_field":"shapeGroup","filter_value":"PRK",
+        "code_field":"shapeID","name_field":"shapeName","source_year":2018,
+        "snapshot_version":"CGAZ-6.0.0",
+        "code_map":{
+          "3916807B81981810195627":"KP-04","3916807B26828785452377":"KP-07",
+          "3916807B41102927738048":"KP-14","3916807B22435523240439":"KP-09",
+          "3916807B15402665570595":"KP-06","3916807B70901732787893":"KP-03",
+          "3916807B17303695305929":"KP-01","3916807B6547210487998":"KP-10",
+          "3916807B2506076687896":"KP-08","3916807B58236937525787":"KP-05",
+          "3916807B88922275293603":"KP-02"
+        }
       },
       "city_source": {
         "path":"data/source/KP.zip","member":"KP.txt","provider":"GeoNames","country_code":"KP",
         "minimum_population":100000,"capital_geoname_id":"1871859","canonical_aliases":{},"names_ko":{}
       },
       "tile_naming": {
-        "boundary_path":"data/source/geoBoundaries-PRK-ADM2.geojson","boundary_provider":"geoBoundaries gbOpen",
+        "boundary_path":"data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM2.zip",
+        "boundary_archive_member":"geoBoundariesCGAZ_ADM2.shp","boundary_provider":"geoBoundaries CGAZ 6.0.0",
+        "boundary_filter_field":"shapeGroup","boundary_filter_value":"PRK",
+        "snapshot_version":"CGAZ-6.0.0",
         "boundary_year":2019,"alternate_names_path":"data/source/geonames-alternatenames-KP.zip",
         "alternate_names_member":"KP.txt","minimum_tile_share":0.05,"require_same_country":true,
         "require_same_admin1":true,
         "allocation_policy":"population_descending_unique_representatives_then_greatest_overlap_fill",
-        "aggregate_admin1_codes":["KP-01","KP-13"],
-        "geonames_admin1_codes":{"01":"KP-04","03":"KP-08","06":"KP-05","07":"KP-06","09":"KP-07","11":"KP-03","12":"KP-01","13":"KP-10","15":"KP-02","17":"KP-09","18":"KP-13"}
+        "aggregate_admin1_codes":["KP-01","KP-14"],
+        "geonames_admin1_codes":{"01":"KP-04","03":"KP-08","06":"KP-05","07":"KP-06","09":"KP-07","11":"KP-03","12":"KP-01","13":"KP-10","14":"KP-14","15":"KP-02","17":"KP-09","18":"KP-09","19":"KP-06"}
       },
       "population_fallback": {
         "path":"data/source/prk_ppp_2020_1km_Aggregated_UNadj.tif","provider":"WorldPop","year":2020,
@@ -190,7 +250,7 @@
         {"code":"KP-08","name_ko":"함경남도","name_en":"South Hamgyong","target_tiles":31},
         {"code":"KP-09","name_ko":"함경북도","name_en":"North Hamgyong","target_tiles":27},
         {"code":"KP-10","name_ko":"량강도","name_en":"Ryanggang","target_tiles":23},
-        {"code":"KP-13","name_ko":"라선","name_en":"Rason","target_tiles":1}
+        {"code":"KP-14","name_ko":"남포","name_en":"Nampo","target_tiles":1}
       ]
     }
   ],
@@ -224,17 +284,20 @@
     "expected_represented_name_codes": [
       "KR-11:seoul", "KR-26:busan", "KR-27:daegu"
     ],
-    "expected_country_tile_counts": {"KOR": 161},
+    "expected_country_tile_counts": {"KOR": 158, "PRK": 206},
     "expected_admin_area_km2_ranges": {
-      "KR-11":[590,620], "KR-26":[760,810], "KR-27":[1450,1540],
-      "KR-28":[1060,1160], "KR-29":[480,520], "KR-30":[520,560],
-      "KR-31":[1020,1110], "KR-50":[445,485]
+      "KR-11":[540,555], "KR-26":[220,232], "KR-27":[445,465],
+      "KR-28":[300,315], "KR-29":[120,128], "KR-30":[345,360],
+      "KR-31":[975,1000], "KR-50":[395,410]
     },
     "expected_admin_tile_counts": {
-      "KR-11":1,"KR-26":1,"KR-27":3,"KR-28":1,"KR-29":1,
-      "KR-30":1,"KR-31":1,"KR-41":17,"KR-42":28,"KR-43":12,
-      "KR-44":11,"KR-45":16,"KR-46":18,"KR-47":28,"KR-48":18,
-      "KR-49":3,"KR-50":1
+      "KR-11":1,"KR-26":1,"KR-27":1,"KR-28":1,"KR-29":1,
+      "KR-30":1,"KR-31":1,"KR-41":17,"KR-42":32,"KR-43":12,
+      "KR-44":11,"KR-45":15,"KR-46":15,"KR-47":30,"KR-48":15,
+      "KR-49":3,"KR-50":1,
+      "KP-01":2,"KP-02":16,"KP-03":20,"KP-04":27,"KP-05":14,
+      "KP-06":20,"KP-07":18,"KP-08":33,"KP-09":28,"KP-10":27,
+      "KP-14":1
     }
   },
   "outputs": {

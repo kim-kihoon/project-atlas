@@ -3,12 +3,16 @@
 from collections import Counter
 from datetime import datetime, timezone
 import csv
+import gc
 import gzip
 import io
 import json
 import math
+import os
 from pathlib import Path
 import re
+import time
+import uuid
 import zipfile
 
 import processing
@@ -65,6 +69,15 @@ def resolve(root, relative_path):
     if root != path and root not in path.parents:
         raise QgsProcessingException(f"Path escapes project root: {relative_path}")
     return path
+
+
+def vector_source_uri(root, relative_path, archive_member=None):
+    """Return a GDAL URI while keeping every configured path project-relative."""
+    path = resolve(root, relative_path)
+    if archive_member:
+        member = str(archive_member).replace("\\", "/").lstrip("/")
+        return f"/vsizip/{path.as_posix()}/{member}"
+    return str(path)
 
 
 def configured_countries(settings):
@@ -319,18 +332,16 @@ def match_cities_to_naming_units(city_records, units, target_crs, context):
             unit for unit in units
             if unit["geometry"].boundingBox().contains(point)
             and unit["geometry"].intersects(point_geometry)
+            and unit["unit_code"].split(":", 1)[-1] == city["canonical"]
         ]
         if containing:
             unit = sorted(containing, key=lambda value: value["unit_code"])[0]
             method = "point_in_naming_unit"
         else:
-            unit = min(
-                units,
-                key=lambda value: (
-                    value["geometry"].distance(point_geometry), value["unit_code"],
-                ),
-            )
-            method = "nearest_naming_unit"
+            # A city point outside every compatible naming polygon remains
+            # source evidence. Nearest-only matching can attach an unrelated
+            # city to a simplified or misplaced district polygon.
+            continue
         code = unit["unit_code"]
         previous = city_by_unit.get(code)
         if previous is None or (city["population"], city["city_id"]) > (
@@ -343,14 +354,17 @@ def match_cities_to_naming_units(city_records, units, target_crs, context):
 
 def normalized_unit_name(value):
     value = re.sub(r"\s*\[[^]]*\]\s*", "", value.strip().lower())
-    value = value.replace(" district", "").replace("county", "")
+    value = value.replace(" district", "").replace(" county", "").replace(" city", "")
     value = re.sub(r"-(si|gun|gu)$", "", value)
     return re.sub(r"[^a-z0-9]+", "-", value).strip("-")
 
 
 def display_unit_name(value):
     value = re.sub(r"\s*\[[^]]*\]\s*", "", value.strip())
-    return re.sub(r"-(si|gun|gu)$", "", value, flags=re.IGNORECASE)
+    # Keep -gu because it denotes a district, not an independent city. Metro
+    # districts normally dissolve to their Admin-1 name; retaining the suffix
+    # prevents an exceptional district from masquerading as a city named Seo.
+    return re.sub(r"-(si|gun)$", "", value, flags=re.IGNORECASE)
 
 
 def load_admin2_population(root, settings):
@@ -457,7 +471,10 @@ def load_admin2_population(root, settings):
 def build_naming_units(root, settings, target_crs, context, admin_geometries, city_records):
     naming = settings["tile_naming"]
     source_path = resolve(root, naming["boundary_path"])
-    source_layer = QgsVectorLayer(str(source_path), "geoboundaries_admin2", "ogr")
+    source_uri = vector_source_uri(
+        root, naming["boundary_path"], naming.get("boundary_archive_member")
+    )
+    source_layer = QgsVectorLayer(source_uri, "geoboundaries_admin2", "ogr")
     if not source_layer.isValid():
         raise QgsProcessingException(f"Invalid naming boundary layer: {source_path}")
     transform = QgsCoordinateTransform(source_layer.crs(), target_crs, context.transformContext())
@@ -476,13 +493,23 @@ def build_naming_units(root, settings, target_crs, context, admin_geometries, ci
         ):
             city_by_unit[key] = city
     parts = {}
+    boundary_filter_field = naming.get("boundary_filter_field")
+    boundary_filter_value = str(naming.get("boundary_filter_value", ""))
     for feature in source_layer.getFeatures():
+        if (
+            boundary_filter_field
+            and str(feature[boundary_filter_field]) != boundary_filter_value
+        ):
+            continue
         geometry = QgsGeometry(feature.geometry())
         geometry.transform(transform)
         if not geometry.isGeosValid():
             geometry = geometry.makeValid()
         if geometry.isEmpty():
             continue
+        source_name = str(feature["shapeName"])
+        canonical = normalized_unit_name(source_name)
+        documented_admins = sorted(code for code, name in populations if name == canonical)
         admin_scores = {}
         for code, admin_geometry in admin_geometries.items():
             if not geometry.boundingBox().intersects(admin_geometry.boundingBox()):
@@ -490,17 +517,18 @@ def build_naming_units(root, settings, target_crs, context, admin_geometries, ci
             area = geometry.intersection(admin_geometry).area()
             if area > 0.0:
                 admin_scores[code] = area
-        if not admin_scores:
+        # Naming and ownership are separate. Prefer spatial parentage, then use
+        # one unambiguous configured population parent when globally simplified
+        # ADM1 geometry omits an ADM2 island. This is the same fallback for every
+        # country and never changes tile ownership.
+        if admin_scores:
+            admin_code = sorted(
+                admin_scores, key=lambda code: (-admin_scores[code], code)
+            )[0]
+        elif len(documented_admins) == 1 and documented_admins[0] in admin_by_code:
+            admin_code = documented_admins[0]
+        else:
             continue
-        source_name = str(feature["shapeName"])
-        canonical = normalized_unit_name(source_name)
-        documented_admins = sorted(code for code, name in populations if name == canonical)
-        # Current authoritative Admin-1 geometry decides the naming unit's
-        # owner. Population source admin codes are evidence only and can lag
-        # boundary reforms such as Gunwi's transfer into Daegu.
-        admin_code = sorted(
-            admin_scores, key=lambda code: (-admin_scores[code], code)
-        )[0]
         reassigned_from_documented_admin = bool(
             documented_admins and admin_code not in documented_admins
         )
@@ -535,18 +563,28 @@ def build_naming_units(root, settings, target_crs, context, admin_geometries, ci
                 "source_names": set(), "geometries": [],
                 "source_year": int(naming["boundary_year"]),
             }
-        # Clip naming evidence to its current authoritative Admin-1. Names and
-        # city fills may not spill across the game-map administrative owner.
-        geometry = geometry.intersection(admin_geometries[admin_code])
-        if geometry.isEmpty():
-            continue
+        if naming.get("require_same_admin1", False):
+            geometry = geometry.intersection(admin_geometries[admin_code])
+            if geometry.isEmpty():
+                continue
         unit = parts.setdefault(unit_code, values)
         unit["source_names"].add(source_name)
         unit["geometries"].append(geometry)
     units = []
     for unit_code in sorted(parts):
         unit = parts[unit_code]
-        unit["geometry"] = QgsGeometry.unaryUnion(unit.pop("geometries"))
+        geometry = QgsGeometry.unaryUnion(unit.pop("geometries"))
+        polygon_parts = [
+            part for part in geometry.asGeometryCollection()
+            if QgsWkbTypes.geometryType(part.wkbType())
+            == QgsWkbTypes.PolygonGeometry
+            and part.area() > 0.0
+        ]
+        if not polygon_parts:
+            continue
+        geometry = QgsGeometry.unaryUnion(polygon_parts)
+        geometry.convertToMultiType()
+        unit["geometry"] = geometry
         unit["source_names"] = ", ".join(sorted(unit["source_names"]))
         units.append(unit)
     if not units:
@@ -600,9 +638,9 @@ def build_naming_units(root, settings, target_crs, context, admin_geometries, ci
 
 def allocate_tile_names(
     candidates, selected_indexes, units, minimum_share,
-    priority_units, tile_admin_assignments, feedback,
+    priority_units, tile_admin_assignments, require_same_admin1, feedback,
 ):
-    """Assign intersecting units inside each tile's current Admin-1 owner."""
+    """Assign positive-overlap naming units without crossing country borders."""
     overlaps = {}
     nearest_fallbacks = set()
     for index in selected_indexes:
@@ -610,7 +648,8 @@ def allocate_tile_names(
         scores = {}
         eligible_units = [
             unit for unit in units
-            if unit["admin1_code"] == tile_admin_assignments[index]
+            if not require_same_admin1
+            or unit["admin1_code"] == tile_admin_assignments[index]
         ]
         for unit in eligible_units:
             geometry = unit["geometry"]
@@ -620,18 +659,9 @@ def allocate_tile_names(
             if area > 0:
                 scores[unit["unit_code"]] = area
         if not scores:
-            if not eligible_units:
-                raise QgsProcessingException(
-                    f"No naming units configured for Admin-1 {tile_admin_assignments[index]}"
-                )
-            nearest = min(
-                eligible_units,
-                key=lambda unit: (
-                    tile["geometry"].distance(unit["geometry"]), unit["unit_code"]
-                ),
+            raise QgsProcessingException(
+                f"No positive-overlap same-country naming unit for {tile['tile_id']}"
             )
-            scores[nearest["unit_code"]] = 0.0
-            nearest_fallbacks.add(index)
         overlaps[index] = scores
 
     assignments = {}
@@ -751,9 +781,6 @@ def allocate_tiles(candidates, admins, country_iso3, minimum_tiles, feedback):
         )
     if minimum_tiles == 1:
         missing_codes = sorted(code for code in admin_codes if counts[code] == 0)
-        # Process the most spatially constrained official areas first. A rescue
-        # may only take a positive-overlap tile from an owner that will retain
-        # at least one tile, and it can never cross the national boundary.
         eligible = {
             code: [
                 index for index in selected
@@ -910,7 +937,10 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         for path in (gpkg_path, project_path, preview_path, report_path):
             path.parent.mkdir(parents=True, exist_ok=True)
 
-        source_layer = QgsVectorLayer(str(source_path), "natural_earth_admin1", "ogr")
+        source_uri = vector_source_uri(
+            root, settings["source"]["path"], settings["source"].get("archive_member")
+        )
+        source_layer = QgsVectorLayer(source_uri, "global_adm0", "ogr")
         if not source_layer.isValid():
             raise QgsProcessingException(f"Invalid source layer: {source_path}")
         target_crs = QgsCoordinateReferenceSystem(settings["crs"])
@@ -953,7 +983,9 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             admin_source = item["admin1_source"]
             admin_source_path = resolve(root, admin_source["path"])
             country_layer = QgsVectorLayer(
-                str(admin_source_path),
+                vector_source_uri(
+                    root, admin_source["path"], admin_source.get("archive_member")
+                ),
                 f"{item['country']['iso3']}_admin1_source",
                 "ogr",
             )
@@ -1019,7 +1051,10 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             geometry = feature.geometry()
             if geometry.isEmpty() or not geometry.boundingBox().intersects(search_extent):
                 continue
-            code = str(feature["adm0_a3"] or "")
+            code_field = settings["source"].get(
+                "country_code_field", settings["source"]["country_filter_field"]
+            )
+            code = str(feature[code_field] or "")
             if not code:
                 continue
             transformed = QgsGeometry(geometry)
@@ -1143,11 +1178,9 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                     territory_scores,
                     key=lambda code: (-territory_scores[code], code),
                 )[0]
-                # Every configured country receives its own collision-free,
-                # stable ISO3 namespace; non-selected candidates use ATLAS.
-                tile_prefix = (
-                    dominant_territory if dominant_territory in country_iso3s else "ATLAS"
-                )
+                # IDs belong to the immutable grid coordinate, never to an
+                # owner that can change when a boundary snapshot changes.
+                tile_prefix = "ATLAS"
                 tile_id = (
                     f"{tile_prefix}_{orientation[0].upper()}_"
                     f"R{row + 100000:06d}_C{col + 100000:06d}"
@@ -1201,26 +1234,26 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
 
         selected_indexes = sorted(assignments, key=lambda i: candidates[i]["tile_id"])
         selected_ids = {candidates[i]["tile_id"] for i in selected_indexes}
-        neighbors = {tile_id: [] for tile_id in selected_ids}
-        for position, first_index in enumerate(selected_indexes):
-            first = candidates[first_index]
-            for second_index in selected_indexes[position + 1 :]:
-                second = candidates[second_index]
-                if not first["geometry"].boundingBox().intersects(second["geometry"].boundingBox()):
-                    continue
-                # Normalize the GEOS intersection because floating-point noise
-                # can turn a shared edge into a microscopic polygon sliver.
-                shared_geometry = shared_edge_geometry(first["geometry"], second["geometry"])
-                if shared_geometry.length() >= side * 0.5:
-                    neighbors[first["tile_id"]].append(second["tile_id"])
-                    neighbors[second["tile_id"]].append(first["tile_id"])
-        for value in neighbors.values():
-            value.sort()
-
         edge_members = {}
         for index in selected_indexes:
             for edge_key, geometry in hex_edge_records(candidates[index]["geometry"]):
                 edge_members.setdefault(edge_key, []).append((index, geometry))
+
+        # Derive adjacency from the same normalized topology used for game
+        # borders. This is complete, deterministic and linear in tile count;
+        # GEOS pairwise intersections can miss a mathematically shared edge
+        # because of sub-millimetre floating-point differences.
+        neighbors = {tile_id: [] for tile_id in selected_ids}
+        for members in edge_members.values():
+            if len(members) != 2:
+                continue
+            first_index, second_index = members[0][0], members[1][0]
+            first_id = candidates[first_index]["tile_id"]
+            second_id = candidates[second_index]["tile_id"]
+            neighbors[first_id].append(second_id)
+            neighbors[second_id].append(first_id)
+        for value in neighbors.values():
+            value.sort()
         city_classes = settings["city_classification"]
         naming_units = []
         capital_unit_codes = set()
@@ -1274,7 +1307,9 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             name_assignments, name_overlaps, name_methods, unit_tiles = allocate_tile_names(
                 candidates, country_indexes, country_units,
                 float(item["tile_naming"]["minimum_tile_share"]),
-                priority_units, assignments, feedback,
+                priority_units, assignments,
+                bool(item["tile_naming"].get("require_same_admin1", False)),
+                feedback,
             )
             naming_units.extend(country_units)
             capital_unit_codes.update(country_capitals)
@@ -1612,12 +1647,45 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             capital_border_features.append(feature)
         capital_border_layer.dataProvider().addFeatures(capital_border_features)
 
-        write_gpkg_layer(admin_layer, gpkg_path, "admin1_source", True)
-        write_gpkg_layer(candidate_layer, gpkg_path, "hex_candidates", False)
-        write_gpkg_layer(tile_layer, gpkg_path, "korea_tiles", False)
-        write_gpkg_layer(naming_layer, gpkg_path, "admin2_naming_source", False)
-        write_gpkg_layer(border_layer, gpkg_path, "admin1_tile_borders", False)
-        write_gpkg_layer(capital_border_layer, gpkg_path, "capital_tile_outlines", False)
+        # Build a new GeoPackage beside the deliverable and replace the old
+        # file only after every layer is written. QGIS/OGR's
+        # CreateOrOverwriteFile fails on some Windows installations when the
+        # destination GeoPackage already exists, which made repeat builds
+        # fail even though the first build succeeded.
+        staging_gpkg_path = gpkg_path.with_name(
+            f".{gpkg_path.stem}.{uuid.uuid4().hex}.tmp.gpkg"
+        )
+        try:
+            write_gpkg_layer(admin_layer, staging_gpkg_path, "admin1_source", True)
+            write_gpkg_layer(candidate_layer, staging_gpkg_path, "hex_candidates", False)
+            write_gpkg_layer(tile_layer, staging_gpkg_path, "korea_tiles", False)
+            write_gpkg_layer(naming_layer, staging_gpkg_path, "admin2_naming_source", False)
+            write_gpkg_layer(border_layer, staging_gpkg_path, "admin1_tile_borders", False)
+            write_gpkg_layer(
+                capital_border_layer,
+                staging_gpkg_path,
+                "capital_tile_outlines",
+                False,
+            )
+            replace_error = None
+            for _ in range(8):
+                try:
+                    gc.collect()
+                    QCoreApplication.processEvents()
+                    os.replace(staging_gpkg_path, gpkg_path)
+                    replace_error = None
+                    break
+                except PermissionError as exc:
+                    replace_error = exc
+                    time.sleep(0.25)
+            if replace_error is not None:
+                raise QgsProcessingException(
+                    "Cannot replace the existing GeoPackage. Close QGIS or any "
+                    f"application using {gpkg_path.name}, then rebuild."
+                ) from replace_error
+        finally:
+            if staging_gpkg_path.exists():
+                staging_gpkg_path.unlink()
         feedback.pushInfo(f"Wrote GeoPackage: {gpkg_path}")
         feedback.setProgress(88)
 
@@ -1809,7 +1877,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             f"- Target tile area: {settings['grid']['target_area_km2']} km2", "",
             "- Country selection: dominant overlap among nearby countries and ocean; no fixed national total",
             "- Country ownership: a tile and its assigned Admin-1 always belong to the same dominant country",
-            "- Assignment policy: one positive-overlap same-country representative per official Admin-1; remaining tiles use greatest overlap",
+            "- Assignment policy: one positive-overlap same-country representative per feasible official Admin-1; remaining tiles use greatest overlap",
             "- National ownership and target counts are never overridden", "",
             "| Code | Admin area | Target | Actual | Difference |",
             "| --- | --- | ---: | ---: | ---: |",
@@ -1848,7 +1916,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         report_lines.extend(["", "## Tile naming", ""])
         report_lines.extend(
             [
-                "- Hard constraint: tile name must intersect the tile and remain inside its final Admin-1 owner",
+                "- Hard constraint: tile name must intersect the tile and remain inside its country; naming geometry is not clipped to Admin-1 ownership",
                 "- Representative pass: units reserve their best free tile in descending population order",
                 "- Fill pass: remaining tiles use greatest overlap; ties use population then stable code",
                 "- Candidate threshold: any positive overlap; no minimum share",

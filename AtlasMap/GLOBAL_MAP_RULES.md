@@ -1,193 +1,180 @@
 # Atlas Global Map Rules
 
-Status: authoritative design contract for the Atlas world-map pipeline
+Status: authoritative design contract
+
 Scope: the Korean Peninsula prototype and every country added later
+
 Encoding: UTF-8
 
-이 문서는 Atlas 육각형 세계 지도의 타일 생성, 소유권, 행정구역, 이름,
-도시, 수도, 인구 및 검증 규칙을 한곳에 고정한다. 구현과 다른 설명이 다른
-문서에 남아 있으면 이 문서와 `config/atlas_korea.json`의 명시적 설정을 우선
-검토한다. 규칙 변경은 코드, 설정, 검증 및 이 문서를 함께 수정해야 한다.
+## 1. Canonical boundary snapshot
 
-## 1. Global snapshot and provenance
+1. Production ADM0, ADM1 and ADM2 boundaries must come from one pinned global
+   dataset version. Do not mix newer country-specific geometry into ownership.
+2. The initial canonical snapshot is geoBoundaries CGAZ 6.0.0 at commit
+   `1289e40e366c7b320550be1ee0614a9472d572d4`.
+3. Pin provider, version, represented years, license, URLs, archive members and
+   SHA-256 checksums. A build must never silently fetch a newer file.
+4. Worldwide compatibility, stable fields and reproducibility take priority
+   over country-specific recency. Older boundaries are acceptable when their
+   limitations are documented.
+5. Official or newer country sources may be used for audits, but never as
+   silent ownership patches. Changing the canonical snapshot is a global data
+   migration and requires full regression review.
+6. Do not invent geometry, population, hierarchy, provenance or license data.
+7. A shared release does not guarantee that ADM1 and ADM2 are internally
+   hierarchical in every country. Atlas still derives an ADM2 naming unit's
+   working parent from greatest geometric overlap with the pinned ADM1 layer.
+8. When an external hierarchy reference or source attribute contradicts that
+   spatial parent, record the conflict as data-quality evidence. Do not
+   reparent, reshape or synthesize the unit for one country.
+9. A missing source unit remains absent from the build. Country-specific
+   boundary supplements, hand-authored parent tables and geometry patches are
+   forbidden in the canonical pipeline.
+10. A correction is eligible for production only through a globally applicable
+    source adapter or a migration of the complete pinned worldwide snapshot.
 
-1. 실제 게임 소유권에 사용하는 ADM0, ADM1 및 ADM2는 하나의 전 세계 공통
-   경계 데이터셋의 동일 버전에서 가져온다.
-2. 공급자, 버전, 기준연도, 라이선스, 다운로드 URL, 파일명 및 SHA-256을
-   고정한다. 빌드 도중 최신 파일을 자동으로 섞지 않는다.
-3. 국가별 공식 지도는 비교와 오류 조사에 사용할 수 있지만, 글로벌 기준
-   경계와 혼합하여 게임 소유권을 만들지 않는다.
-4. 분쟁지역은 선택한 글로벌 데이터셋의 한 가지 세계관을 그대로 사용한다.
-   국가별 수동 경계 패치로 서로 다른 세계관을 합치지 않는다.
-5. 스냅샷을 교체하면 새 지도 버전으로 취급한다. 변경된 국가, Admin-1,
-   ADM2, 타일 소유권 및 `tile_id` 안정성 영향을 보고한다.
-6. 오래된 스냅샷도 내부 계층과 위상이 일관되면 사용할 수 있다. 서로 다른
-   기준연도의 ADM0, ADM1 및 ADM2를 섞은 상태는 허용하지 않는다.
+## 2. Global grid and tile identity
 
-## 2. Global grid
-
-1. 모든 국가는 하나의 공통 전 세계 육각형 격자를 공유한다. 국경마다 별도
-   격자를 생성하지 않는다.
-2. 최종 게임 타일은 해안선이나 행정경계로 자르지 않은 완전한 육각형이다.
-3. 목표 면적은 현재 605.21 km2이며, 면적과 형상 허용오차는 설정에서 읽는다.
-4. 방향은 설정으로 `pointy_top` 또는 `flat_top`을 선택하며 완전 재빌드가
-   가능해야 한다.
-5. 글로벌 격자 좌표계 또는 DGGS는 세계 전체에서 면적, 날짜변경선, 극지방
-   및 이웃 관계를 처리할 수 있어야 한다. 한국 전용 EPSG:5179는 글로벌
-   격자의 기준이 될 수 없다.
-6. `tile_id`는 격자 좌표, 해상도 및 방향만으로 결정한다. 국가, Admin-1,
-   도시 이름 또는 소유권이 바뀌어도 같은 육각형의 ID는 바뀌지 않아야 한다.
-7. 이웃 관계는 격자 좌표로 직접 계산한다. 전 세계 타일의 모든 쌍을 기하
-   비교하는 방식은 사용하지 않는다.
+1. Every country shares one immutable regular-hex grid. Do not generate a new
+   grid origin at each border.
+2. Final game tiles are complete regular hexagons and are never clipped to a
+   coastline or administrative boundary.
+3. The current prototype target area is 605.21 km2. Tolerances and orientation
+   are configuration values.
+4. A tile ID is derived only from immutable grid coordinates and orientation.
+   It must not contain country, Admin-1, city name or current ownership.
+5. Neighbor relationships are derived from grid coordinates or normalized
+   shared-edge keys and must be symmetric.
+6. EPSG:5179 is valid only for the Korean prototype. Before a world build, Atlas
+   must freeze a global CRS or DGGS plus antimeridian, world-wrap and polar rules.
 
 ## 3. Country and ocean ownership
 
-1. 각 육각형과 모든 ADM0 국가 및 해양의 실제 중첩 면적을 비교한다.
-2. 가장 넓은 면적을 차지하는 ADM0 국가 또는 해양이 타일의 국가 소유자가
-   된다.
-3. 국가 타일 수는 고정하지 않는다. 국가별 목표, 최소치, 인구 또는 수도
-   여부가 ADM0 최대중첩 결과를 바꿀 수 없다.
-4. 동일 타일을 두 국가가 소유할 수 없으며, 국가 간 소유권 override는
-   금지한다.
-5. 동률은 설정에 기록된 안정적인 코드 정렬로 결정하고 보고서에 남긴다.
+1. For every candidate hex, calculate actual intersection area against every
+   relevant ADM0 territory and the remaining ocean area.
+2. The greatest area wins. Stable territory code order breaks an exact tie.
+3. National tile totals are derived results, never fixed targets.
+4. Population, capital status, city status, desired balance and manual overrides
+   may not change national ownership.
+5. Two countries may never own the same tile. Disputed features remain exactly
+   as represented by the pinned global snapshot.
 
 ## 4. Admin-1 ownership
 
-1. 국가 소유권이 먼저 확정된 뒤 같은 국가의 ADM1만 후보로 고려한다.
-2. 기본 소유자는 육각형과 가장 많이 중첩되는 ADM1이다.
-3. 유한한 격자 때문에 공식 ADM1이 0타일이 되는 경우, 같은 국가 안에서
-   양의 면적으로 중첩되는 타일 하나를 대표 타일로 확보할 수 있다.
-4. 대표 타일 확보는 다른 공식 ADM1의 마지막 타일을 빼앗을 수 없고 국가
-   경계를 넘을 수 없다. 가능한 후보 중 해당 ADM1 중첩이 가장 큰 타일을
-   선택한다.
-5. 대표 타일 이외의 모든 타일은 최대중첩 ADM1 소유권을 유지한다.
-6. 역사적 목표 타일 수는 보고용이며 할당 쿼터나 검증 실패 조건이 아니다.
-7. ADM1이 존재하지 않는 도시국가 등은 글로벌 원자료의 ADM0를 명시적인
-   최상위 행정 단위로 재사용할 수 있다. 새로운 경계를 발명하지 않는다.
-8. 행정경계는 원본 곡선 경계를 직접 그리지 않는다. 서로 다른
-   `admin1_code`를 가진 육각형 사이의 공유 변과 그룹 외곽 변으로 만든다.
+1. After the country is fixed, compare only ADM1 units in that same country.
+2. Initially assign the tile to the ADM1 unit with greatest intersection area.
+   Stable admin code order breaks an exact tie.
+3. Guarantee one positive-overlap same-country representative for every feasible
+   official ADM1 that would otherwise receive zero tiles. Never take another
+   official ADM1's last tile.
+4. Target counts and historical design totals are report values only. The
+   one-tile official-area floor is not a target-count quota.
+5. `admin1_code` is ownership. It is never changed to make a name, city or
+   capital visible.
+6. Game administrative borders come from topology: cancel edges shared by the
+   same owner and retain different-owner and exterior edges exactly once.
 
 ## 5. Display-name allocation
 
-소유권과 표시 이름은 서로 다른 차원이다. 표시 이름은 소유권을 변경하지
-않는다.
+Ownership and display naming are independent dimensions.
 
-1. 각 ADM2 또는 동급 도시·군 네이밍 단위를 현재 글로벌 스냅샷의 부모
-   ADM1에 연결한다.
-2. 네이밍 기하는 부모 ADM1로 clip하며, 같은 국가와 같은 최종 ADM1 소유
-   타일에만 이름 후보가 될 수 있다.
-3. 인구는 국가별 예외 없이 같은 GeoNames 복구 순서로 결정한다. 양의 정수만
-   유효하다.
-4. 모든 네이밍 단위를 인구 내림차순으로 처리한다. 각 단위는 아직 비어 있는
-   호환 타일 중 자기 중첩 면적이 가장 큰 대표 타일 하나를 먼저 확보한다.
-5. 더 작은 인구의 단위는 이미 배정된 더 큰 단위의 대표 타일을 빼앗지
-   못한다.
-6. 대표 타일 확보가 끝난 뒤 남은 타일은 해당 타일과 중첩되는 네이밍 단위
-   중 중첩 면적이 가장 큰 단위에 배정한다.
-7. 잔여 타일의 중첩 면적 동률은 인구, 그다음 안정적인 네이밍 단위 코드로
-   결정한다.
-8. 양의 중첩이면 후보가 될 수 있다. 이름을 주기 위해 공간 중첩이나 국가,
-   ADM1 경계를 완화하지 않는다.
-9. 한 네이밍 단위가 여러 타일을 받는 것은 허용한다. 대표 타일과 추가
-   타일의 배정 방법을 속성과 보고서에 기록한다.
-10. 이 알고리즘은 현재와 미래의 모든 국가에 동일하게 적용한다. 국가별
-    이름 할당 분기나 수동 이름 패치를 추가하지 않는다.
+1. Consider every same-country ADM2 or equivalent city/county naming unit whose
+   geometry has positive area overlap with the tile.
+2. Assign every naming unit to its greatest-overlap authoritative ADM1 and clip
+   its geometry to that ADM1.
+3. A tile considers only naming units belonging to its final ADM1 owner. Naming
+   may cross neither national nor Admin-1 ownership boundaries.
+4. Resolve naming-unit population through the same country-neutral GeoNames
+   recovery sequence. Unknown values remain auditable and use the configured
+   WorldPop fallback; never add country-specific population patches.
+5. Process units in descending population order. Each unit may reserve its
+   largest-overlap still-unclaimed compatible tile.
+6. A smaller unit cannot evict a tile already reserved by a larger unit.
+7. Fill remaining tiles with their greatest-overlap naming unit; use population
+   and then stable unit code only as tie-breakers.
+8. Any positive overlap is eligible. A nearest-only, zero-overlap fallback is
+   forbidden.
+9. Multiple tiles may carry the same naming-unit code. The algorithm is identical
+   for every country and may not contain country-specific naming branches.
 
-## 6. Cities and tile population
+## 6. Cities and population
 
-1. 도시 상태는 행정 소유권과 독립적이다. 도시 타일도 원래 ADM1 소유권을
-   유지한다.
-2. 적격 실제 도시 하나당 호환되는 대표 anchor 타일은 최대 하나다.
-3. 실제 도시 인구 100,000 이상 1,000,000 미만은 초기 `city`, 1,000,000
-   이상은 초기 `metropolis`다.
-4. 초기 도시는 2 district slots, 초기 metropolis는 3 slots, 일반 타일은
-   인구와 관계없이 1 slot이다.
-5. 수도 여부는 별도 속성이며 district slot을 추가하지 않는다.
-6. 일반 타일이 100,000 이상이면 자동 도시가 아니라 플레이어 승격 가능
-   상태만 가진다.
-7. 같은 네이밍 단위 코드를 가진 추가 타일은 대표 anchor의 표시용
-   `map_class`를 상속한다. anchor의 인구, `city_class` 또는
-   `is_initial_city`는 복사하지 않는다.
-8. 각 국가의 게임 인구는 설정된 동일연도 UN WPP medium-variant 총합과
-   정확히 일치해야 한다.
-9. 대표 도시 anchor 인구를 국가 총합에서 뺀 뒤, 잔여 인구를 WorldPop
-   공간 가중치와 largest remainder로 비-anchor 타일에 배분한다.
-10. 타일에는 게임 인구 정수 하나만 게시한다. 네이밍 증거 인구는 내부
-    자료로 유지한다.
+1. Administrative ownership and city class are independent. A city tile keeps
+   its actual Admin-1 owner.
+2. Each represented qualifying real city has at most one anchor tile.
+3. A GeoNames city population from 100,000 to under 1,000,000 creates an initial
+   `city`; 1,000,000 or more creates an initial `metropolis`.
+4. Initial cities have two district slots, metropolises three and ordinary tiles
+   one. Capital status adds no slot.
+5. Ordinary tiles do not automatically become cities at 100,000; they become
+   eligible for player-selected promotion.
+6. Other tiles carrying the same naming-unit code inherit only the anchor's
+   display `map_class`, not its population, `city_class` or initial-city state.
+7. Each country has one exact integer game-population total from the configured
+   UN WPP medium variant. City anchors are subtracted and the residual is
+   distributed by WorldPop weights and largest remainder.
 
 ## 7. Capitals
 
-1. 수도 이름과 anchor는 설정된 실제 수도 레코드에서 결정한다.
-2. 수도 여부는 타일 채우기 색을 바꾸지 않는다. 채우기는 `admin`, `city`,
-   `metropolis` 세 종류뿐이다.
-3. 노란 수도 테두리는 수도 이름 타일만이 아니라 공식 수도 ADM1이 소유한
-   전체 타일 그룹의 외곽에 그린다.
-4. 수도 ADM1 안에서 서로 공유하는 모든 내부 육각형 변은 노란 테두리에서
-   제거한다.
-5. 수도 ADM1 안의 타일 이름이 수도가 아니어도 해당 타일은 수도 ADM1 외곽선
-   그룹에 포함된다.
+1. Capital status follows the represented capital naming-unit code and does not
+   change ownership or fill class.
+2. Draw one yellow outline on the exterior edges of the complete official
+   capital ADM1 tile group. Cancel internal shared edges.
+3. The capital ADM1 receives the same feasible one-tile representation floor as
+   every other official ADM1.
+4. A capital name may cross neither national nor Admin-1 ownership boundaries.
 
-## 8. Labels and QGIS presentation
+## 8. QGIS presentation
 
-1. 개별 타일 이름은 활성화된 뒤 확대 방향의 cutoff 없이 유지한다.
-2. 타일 이름은 자기 육각형 안에 완전히 들어갈 때만 표시한다.
-3. `tile_id`는 충분히 가까운 확대 수준에서만 추가 표시한다.
-4. ADM1 요약 이름과 타일 수는 overview 축척에서만 보이고 가까운 확대에서는
-   숨긴다.
-5. 일반 타일 선, ADM1 경계, 국가 경계 및 수도 외곽선은 시각적으로 구분한다.
-6. 실제 원본 경계는 게임 경계와 분리된 toggle 가능한 검증 그룹에 둔다.
+1. Use exactly three fills: `admin`, `city` and `metropolis`. Capital is an
+   outline, not a fourth fill.
+2. Tile names remain enabled at all closer zoom levels after their configured
+   zoomed-out threshold and must fit completely inside the hex.
+3. Show `tile_id` only at a sufficiently close scale.
+4. Hide Admin-1 summary labels at close scales so they cannot cover tile names.
+5. Keep source boundaries in a separate toggleable validation group.
+6. Use project-relative paths and QGIS core functionality only.
 
-## 9. Global processing and performance
+## 9. Global processing requirements
 
-1. ADM0, ADM1 및 ADM2 기하는 공간 인덱스로 조회한다. 모든 타일과 모든
-   행정구역의 전수 조합을 만들지 않는다.
-2. 전 세계 빌드는 고정 공간 파티션으로 나눌 수 있어야 하며, 파티션 경계의
-   타일 ID와 이웃은 단일 글로벌 빌드와 같아야 한다.
-3. 변경되지 않은 파티션은 증분 재사용할 수 있어야 한다.
-4. 국가별 계산은 병렬화할 수 있지만 ADM0 소유권은 한 공통 경계 스냅샷과
-   한 공통 격자에서 먼저 확정한다.
-5. 국가와 Admin 목록은 글로벌 데이터에서 자동 생성한다. 약 200개 국가를
-   설정 파일에 손으로 복제하지 않는다.
-6. 소스별 필드 차이는 한 번의 source adapter에서 정규화하며 국가별 빌드
-   코드에 흩어 놓지 않는다.
+1. Read the country and admin registry from data. Do not copy one configuration
+   block manually for roughly 200 countries.
+2. Use spatial indexes for ADM0/ADM1/ADM2 lookup. A world build must not compare
+   every hex with every polygon.
+3. Normalize provider schema differences in one source adapter rather than in
+   country-specific build code.
+4. Support deterministic partitioned and incremental builds while preserving
+   the same grid IDs and boundary results as a full build.
 
 ## 10. Validation gates
 
-한반도 release gate와 글로벌 준비도 gate는 별도로 유지한다.
+The Korean release gate and world-readiness gate are separate.
 
-### Per-build geometry and allocation gate
+Every regional release must verify:
 
-- 설정된 CRS와 타일 면적·정육각형 허용오차
-- 완전한 육각형, 유효한 기하, 타일 중복 없음
-- ADM0 국가·해양 최대중첩 소유권
-- 국가 간 타일 충돌 없음
-- 동일 국가 ADM1 소유권 및 대표 타일 예외의 감사 가능성
-- 네이밍 대표 우선 및 잔여 최대중첩 규칙
-- 유일하고 대칭적인 이웃 관계
-- 국가별 타일 인구와 UN WPP 총합의 정확한 일치
-- 세 가지 fill class와 수도 ADM1 외곽선 위상
-- 상대 경로와 재현 가능한 출력
+- pinned sources and expected CRS;
+- complete valid regular hexagons and target area tolerance;
+- greatest-overlap country-or-ocean ownership;
+- one feasible positive-overlap representative per official Admin-1, with
+  greatest-overlap ownership for every remaining tile;
+- no ownership overrides and no tile overlaps;
+- positive-overlap same-country naming allocation;
+- unique stable ownership-independent IDs;
+- complete symmetric adjacency;
+- exact national population reconciliation;
+- three fills and correct capital naming-group outlines;
+- relative shared paths, successful exports and generated preview.
 
-### Global-readiness gate
+The world-readiness gate additionally requires:
 
-- 하나의 고정된 ADM0/ADM1/ADM2 글로벌 경계 스냅샷
-- 공급자·버전·연도·라이선스·체크섬 완비
-- 글로벌 격자 CRS 또는 DGGS 확정
-- 소유권과 독립적인 안정적 `tile_id`
-- 날짜변경선·극지방·분쟁지역 정책
-- 자동 국가 및 행정구역 레지스트리
-- 공간 인덱스 기반 중첩 계산
-- 좌표 기반 O(n) 이웃 계산
-- 국가별 하드코딩된 회귀 타일 수 제거
-- 글로벌 원자료의 ADM0/ADM1/ADM2 부모 관계, 공백 및 중복 검사
+- frozen global CRS/DGGS, antimeridian and polar policies;
+- a data-driven global country/admin registry;
+- spatially indexed boundary lookup and scalable partitioning;
+- sample tests for islands, enclaves, disputed areas, antimeridian crossings and
+  polar regions;
+- country-neutral ADM1/ADM2 hierarchy-coherence and source-completeness audits
+  that report contradictions without silently repairing ownership;
+- no country-specific ownership or naming exceptions.
 
-글로벌 준비도 검증이 실패해도 현재 한반도 산출물의 기하 release gate 결과를
-바꾸지 않는다. 다만 글로벌 준비도 보고서가 PASS가 되기 전에는 현재 코드를
-전 세계 파이프라인으로 간주하거나 배포하지 않는다.
-
-## 11. Current prototype status
-
-현재 한반도 프로토타입은 KOR과 PRK 두 국가만 처리하며 EPSG:5179를 사용한다.
-KOR과 PRK의 ADM1/ADM2가 서로 다른 공급자와 기준연도를 사용하므로 글로벌
-단일 스냅샷 규칙을 아직 충족하지 않는다. 이 상태는 한반도 알고리즘 검증용
-프로토타입이며 글로벌 기준 데이터로 확정된 상태가 아니다.
+Never call the world pipeline complete while the separate global-readiness
+report has blocking failures.

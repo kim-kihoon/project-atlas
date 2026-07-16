@@ -1,27 +1,28 @@
 # Atlas global readiness report
 
-Generated: 2026-07-15T22:46:57.753725+00:00
+Generated: 2026-07-16T02:39:18.115813+00:00
 
 Overall result: **FAIL**
 
-- Blocking failures: 9
+- Blocking failures: 4
 - Warnings: 1
 - Configured prototype countries: 2
 
 | Check | Result | Detail |
 | --- | --- | --- |
 | Authoritative global rules document | PASS | GLOBAL_MAP_RULES.md |
-| Global boundary candidate evaluation is recorded | PASS | provider=World Bank Official Boundaries; status=rejected; report=reports/global_boundary_candidate_report.md |
-| One frozen global ADM0/ADM1/ADM2 snapshot | FAIL | missing=['provider', 'version', 'reference_year', 'license', 'sha256', 'adm0_path', 'adm1_path', 'adm2_path']; candidate=World Bank Official Boundaries; candidate_status=rejected |
+| Global boundary candidate evaluation is recorded | PASS | provider=geoBoundaries CGAZ; status=accepted; report=reports/global_boundary_candidate_report.md |
+| One frozen global ADM0/ADM1/ADM2 snapshot | PASS | missing=[]; candidate=geoBoundaries CGAZ; candidate_status=accepted |
 | Canonical snapshot requires all hierarchy levels | PASS | levels=['ADM0', 'ADM1', 'ADM2'] |
-| Configured canonical boundary files exist | FAIL | paths=[None, None, None]; missing=[] |
-| Configured countries do not mix boundary snapshots | FAIL | ADM1=[('data/source/natural_earth_admin1/ne_10m_admin_1_states_provinces.shp', 2022), ('data/source/sgis_2025/admin1/bnd_sido_00_2025_2Q.shp', 2025)]; ADM2=[('data/source/geoBoundaries-KOR-ADM2.geojson', 2020), ('data/source/geoBoundaries-PRK-ADM2.geojson', 2019)] |
-| Global grid, world-wrap and polar policies are frozen | FAIL | missing=['crs_or_dggs', 'tile_id_scheme', 'world_wrap_policy', 'polar_policy']; prototype_crs=EPSG:5179 |
-| Tile IDs are independent of ownership | FAIL | current builder prefixes tile_id with the dominant territory |
+| Configured canonical boundary files exist | PASS | paths=['data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM0.zip', 'data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM1.zip', 'data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM2.zip']; missing=[] |
+| Configured countries do not mix boundary snapshots | PASS | ADM1=[('data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM1.zip', 'geoBoundariesCGAZ_ADM1.shp', 'CGAZ-6.0.0')]; ADM2=[('data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM2.zip', 'geoBoundariesCGAZ_ADM2.shp', 'CGAZ-6.0.0')] |
+| Global grid, world-wrap and polar policies are frozen | FAIL | missing=['crs_or_dggs', 'world_wrap_policy', 'polar_policy']; prototype_crs=EPSG:5179 |
+| Tile IDs are independent of ownership | PASS | grid-coordinate scheme configured; ownership-derived prefix absent |
 | Country and admin registry is data-driven | FAIL | registry=unset; configured_countries=2 |
 | Spatial indexes are used for global boundary lookup | FAIL | QgsSpatialIndex not found in the current builder |
-| Neighbor lookup is coordinate based rather than pairwise | FAIL | current builder performs an O(n^2) selected-tile neighbor scan |
-| Global gate has no country-specific tile-count quotas | FAIL | prototype_regressions={'expected_country_tile_counts': ['KOR'], 'expected_admin_tile_counts': ['KR-11', 'KR-26', 'KR-27', 'KR-28', 'KR-29', 'KR-30', 'KR-31', 'KR-41', 'KR-42', 'KR-43', 'KR-44', 'KR-45', 'KR-46', 'KR-47', 'KR-48', 'KR-49', 'KR-50']} |
+| ADM1/ADM2 hierarchy coherence is audited without country patches | FAIL | policy=country_neutral_report_only_no_automatic_repair; prototype_report=reports/korea_cgaz_hierarchy_consistency_audit.md; automated_global_audit=False |
+| Neighbor lookup is coordinate based rather than pairwise | PASS | normalized edge-key topology lookup |
+| Global gate has no country-specific tile-count quotas | PASS | frozen counts are regression observations; the universal one-tile official-area floor is not a country target quota |
 | Output contract is world-build capable | WARN | prototype_outputs=['data/processed/Atlas_Korea.gpkg', 'Atlas_Korea.qgz', 'previews/Atlas_Korea_Overview.png', 'exports/Atlas_Korea_Tiles.geojson', 'exports/Atlas_Korea_Tiles.csv'] |
 | Prototype country coverage | INFO | configured=['KOR', 'PRK'] |
 

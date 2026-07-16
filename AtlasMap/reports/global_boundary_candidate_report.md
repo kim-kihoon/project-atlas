@@ -1,5 +1,10 @@
 # Global boundary candidate report
 
+> Superseding decision (2026-07-16): geoBoundaries CGAZ 6.0.0 was accepted
+> after complete ADM0/ADM1/ADM2 screening. See
+> `reports/global_snapshot_decision.md`. Earlier screening below is retained as
+> decision history.
+
 Candidate: World Bank Official Boundaries v3
 Catalog modified: 2026-07-14
 Evaluated: 2026-07-16 (Asia/Seoul)

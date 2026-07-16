@@ -1,5 +1,29 @@
 # Source data
 
+## Active canonical global boundary snapshot: geoBoundaries CGAZ 6.0.0
+
+- Provider: William & Mary geoLab, geoBoundaries CGAZ
+- Release: 6.0.0, published 2023-09-14
+- Pinned commit: `1289e40e366c7b320550be1ee0614a9472d572d4`
+- Frozen build date in DBF metadata: 2023-09-13
+- CRS: EPSG:4326; transformed outputs use EPSG:5179 for this prototype
+- License family: open geoBoundaries distribution; attribution required under
+  the provider's CC BY / ODbL terms
+- ADM0: 218 features; SHA-256 `95761885d55abf850d75d6835779a6e9fae966b1fa1ad5534f40865e5b71180c`
+- ADM1: 3,223 features; SHA-256 `1571b7bfc8a64940ad8c380a91d997a6d9a9a78090b235aced00eb44a2c0106e`
+- ADM2: 49,617 features; SHA-256 `06cadadae2f1e8fab89dec62365a850b663da280df712c39c96e3c9f33a49696`
+- Coverage checks: 218 nonblank groups at every level, unique nonblank ADM1/ADM2
+  IDs, and zero invalid global features.
+- Korean sample: KOR has 17 ADM1 and 228 ADM2; PRK has 11 ADM1 and 179 ADM2.
+  Sangwon is spatially parented to North Hwanghae in this snapshot.
+- Active use: one common ADM0/ADM1/ADM2 source for national ownership,
+  Admin-1 ownership and city/county naming.
+- Known trade-off: represented years vary by country and some Korean metro
+  extents are old. Modern dated facts are audit-only and do not patch ownership.
+
+The country-specific sources below are retained as comparison evidence and are
+not active boundary inputs in the current build.
+
 ## United Nations World Population Prospects 2024
 
 - Provider: United Nations, Department of Economic and Social Affairs,
@@ -212,3 +236,49 @@ filtered, repaired, and reprojected layers belong in
 - Screening status: not accepted. KOR ADM1 is complete and the Sangwon ADM2
   point-on-surface falls in North Hwanghae, but the global composite, hierarchy
   topology and metadata/file count discrepancy still require validation.
+
+## NGII Democratic People's Republic of Korea administrative tables
+
+- Provider: National Geographic Information Institute, Republic of Korea
+- Catalog ADM1: https://www.data.go.kr/data/15132912/fileData.do
+- Catalog ADM2: https://www.data.go.kr/data/15132911/fileData.do
+- Dataset date: 2024-08-08
+- Downloaded: 2026-07-16 (Asia/Seoul)
+- License: Korea Open Government License, Type 1 (attribution)
+- Directory: `ngii_prk_20240808/`
+- `ngii_prk_admin1_20240808.csv`: 12 data rows, SHA-256
+  `c2673aeb0446aef2bc186107859ad205abe20206d51b83bbc6610d1b2c5a2383`
+- `ngii_prk_admin2_20240808.csv`: 218 data rows, SHA-256
+  `c814949c25fbed9a92944c5e3cee21def28e57d7b3cebc2b26e3eb48b5f04b36`
+- Original encoding: CP949; files are retained byte-for-byte without conversion.
+- Evaluation: retained as official hierarchy and name evidence only. The CSV
+  `SDE.ST_GEOMETRY` text exposes an envelope and an Oracle BLOB object reference,
+  not recoverable polygon vertices. ADM1 contains Pyongyang, Kaesong, Nampo and
+  nine provinces but omits Rason. These files are not configured build inputs.
+
+## OpenStreetMap DPRK boundary screening
+
+- Provider: OpenStreetMap contributors
+- Country relation: `192734`
+- Interfaces screened: Nominatim and Overpass API
+- Screened: 2026-07-16 (Asia/Seoul)
+- License: Open Database License 1.0; attribution and derived-database duties
+  require review before adoption and distribution.
+- Live result: 13 ISO-coded ADM1 relations, including `KP-13` Rason, `KP-14`
+  Nampo and `KP-15` Kaesong; 201 ADM2 relations; Sangwon relation `3860474`
+  resolves under North Hwanghae.
+- Pinned extract: Geofabrik `north-korea-260710.osm.pbf`, 90,888,232 bytes.
+- Geofabrik MD5: `f5eabf93af5456971081512a9f3886a7` (matches the downloaded
+  `.md5` sidecar).
+- SHA-256: `721eb7d8146fb75116231ebac93a2d56a10b8559ad67283b405fc55c6ea121c2`.
+- North Pyongan diagnostic: live relation `356540` captured on 2026-07-16,
+  SHA-256 `8f32c2f250634c9fe58e9fec11b07c7cf8445ee1cabaeeccd4869d80885aa194`;
+  tags and bounds are present but member geometry is absent.
+- Derived screening file: `data/processed/PRK_OSM_Boundary_Candidate.gpkg`,
+  EPSG:5179, SHA-256
+  `003d4fc8f9f95de9a615bca082f0d0d4dbb7c1930384439d3a8873cca0a21a24`.
+- Geometry result: 12 valid ADM1 polygons and 195 valid ADM2 polygons. Sangwon
+  falls inside North Hwanghae, but North Pyongan is missing and 23 ADM2
+  points-on-surface have no available ADM1 parent.
+- Screening status: rejected as a current build input. Atlas does not infer the
+  missing relation geometry or mix this incomplete hierarchy into the map.

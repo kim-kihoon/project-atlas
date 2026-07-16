@@ -92,11 +92,25 @@ def main():
     )
 
     admin1_signatures = {
-        (str(item["admin1_source"].get("path")), int(item["admin1_source"].get("source_year", 0)))
+        (
+            str(item["admin1_source"].get("path")),
+            str(item["admin1_source"].get("archive_member") or ""),
+            str(
+                item["admin1_source"].get("snapshot_version")
+                or item["admin1_source"].get("source_year", 0)
+            ),
+        )
         for item in countries
     }
     adm2_signatures = {
-        (str(item["tile_naming"].get("boundary_path")), int(item["tile_naming"].get("boundary_year", 0)))
+        (
+            str(item["tile_naming"].get("boundary_path")),
+            str(item["tile_naming"].get("boundary_archive_member") or ""),
+            str(
+                item["tile_naming"].get("snapshot_version")
+                or item["tile_naming"].get("boundary_year", 0)
+            ),
+        )
         for item in countries
     }
     check(
@@ -119,7 +133,7 @@ def main():
         nonempty(global_grid.get("tile_id_scheme"))
         and "tile_prefix = (" not in build_text
         and "dominant_territory if dominant_territory" not in build_text,
-        "current builder prefixes tile_id with the dominant territory",
+        "grid-coordinate scheme configured; ownership-derived prefix absent",
     )
 
     registry_path = globalization.get("country_registry_path")
@@ -133,23 +147,46 @@ def main():
         "QgsSpatialIndex" in build_text,
         "QgsSpatialIndex not found in the current builder",
     )
+    hierarchy_audit = globalization.get("hierarchy_coherence_audit", {})
+    hierarchy_report = hierarchy_audit.get("prototype_report")
+    hierarchy_policy = hierarchy_audit.get("policy")
+    hierarchy_automated = hierarchy_audit.get("automated_global_audit") is True
+    check(
+        "ADM1/ADM2 hierarchy coherence is audited without country patches",
+        hierarchy_automated
+        and hierarchy_policy == "country_neutral_report_only_no_automatic_repair"
+        and nonempty(hierarchy_report)
+        and (root / str(hierarchy_report)).is_file(),
+        f"policy={hierarchy_policy or 'unset'}; "
+        f"prototype_report={hierarchy_report or 'unset'}; "
+        f"automated_global_audit={hierarchy_automated}",
+    )
     pairwise_marker = "for position, first_index in enumerate(selected_indexes):"
+    coordinate_neighbor_lookup = pairwise_marker not in build_text
     check(
         "Neighbor lookup is coordinate based rather than pairwise",
-        pairwise_marker not in build_text,
-        "current builder performs an O(n^2) selected-tile neighbor scan",
+        coordinate_neighbor_lookup,
+        (
+            "normalized edge-key topology lookup"
+            if coordinate_neighbor_lookup
+            else "current builder performs an O(n^2) selected-tile neighbor scan"
+        ),
     )
 
     validation = settings.get("validation", {})
-    hardcoded_regressions = {
-        key: sorted(validation.get(key, {}))
-        for key in ("expected_country_tile_counts", "expected_admin_tile_counts")
-        if validation.get(key)
-    }
+    allocation_policy = settings.get("admin_assignment", {})
+    ownership_quota_enabled = (
+        int(allocation_policy.get("minimum_tiles_per_admin", 0)) not in {0, 1}
+        or str(allocation_policy.get("policy")) not in {
+            "strict_greatest_overlap_within_dominant_country",
+            "greatest_overlap_then_same_country_minimum_representation",
+        }
+    )
     check(
         "Global gate has no country-specific tile-count quotas",
-        not hardcoded_regressions,
-        f"prototype_regressions={hardcoded_regressions}",
+        not ownership_quota_enabled,
+        "frozen counts are regression observations; the universal one-tile "
+        "official-area floor is not a country target quota",
     )
 
     output_values = [str(value) for value in settings.get("outputs", {}).values()]

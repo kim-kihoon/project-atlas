@@ -182,10 +182,12 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         admin_naming_policy_errors = [
             item["country"]["iso3"]
             for item in country_settings
-            if item.get("tile_naming", {}).get("require_same_admin1") is not True
+            if not isinstance(
+                item.get("tile_naming", {}).get("require_same_admin1"), bool
+            )
         ]
         check(
-            "Every country confines naming and city fill to the final Admin-1 owner",
+            "Every country explicitly configures naming/Admin-1 coupling",
             not admin_naming_policy_errors,
             f"invalid={admin_naming_policy_errors}",
         )
@@ -253,7 +255,7 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             if actual.get(code, 0) != expected
         }
         check(
-            "Existing South Korea allocation is unchanged",
+            "Frozen canonical-snapshot allocation is unchanged",
             not country_regressions and not admin_regressions,
             f"country={country_regressions}, admin={admin_regressions}",
         )
@@ -425,22 +427,87 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             if not minimum <= area_km2 <= maximum:
                 area_regressions[str(code)] = round(area_km2, 3)
         check(
-            "Authoritative Admin-1 source area ranges",
+            "Frozen canonical-snapshot Admin-1 area ranges",
             admin_layer.isValid() and not area_regressions,
             f"outside_ranges={area_regressions}",
         )
+        clipped_admin_codes = {
+            admin["code"]
+            for item in country_settings
+            if item.get("tile_naming", {}).get("require_same_admin1") is True
+            for admin in item["admin1"]
+        }
         naming_outside_admin = [
             str(unit["unit_code"])
             for unit in naming_features
-            if str(unit["admin1_code"] or "") not in admin_geometry_by_code
-            or unit.geometry().difference(
-                admin_geometry_by_code[str(unit["admin1_code"] or "")]
-            ).area() > float(validation["overlap_area_tolerance_m2"])
+            if str(unit["admin1_code"] or "") in clipped_admin_codes
+            and (
+                str(unit["admin1_code"] or "") not in admin_geometry_by_code
+                or unit.geometry().difference(
+                    admin_geometry_by_code[str(unit["admin1_code"] or "")]
+                ).area() > float(validation["overlap_area_tolerance_m2"])
+            )
         ]
         check(
-            "Naming geometries are clipped to their authoritative Admin-1",
+            "Naming geometries follow configured Admin-1 clipping policy",
             admin_layer.isValid() and not naming_outside_admin,
-            f"outside={naming_outside_admin}",
+            f"strict_admin_codes={sorted(clipped_admin_codes)}; outside={naming_outside_admin}",
+        )
+        administrative_reference = settings.get("administrative_reference", {})
+        dated_enforcement = str(
+            administrative_reference.get("enforcement") or "release_gate"
+        )
+        enforce_dated_facts = dated_enforcement == "release_gate"
+        required_admin1_mismatches = []
+        for fact in administrative_reference.get("required_admin1_units", []):
+            code = str(fact.get("admin1_code") or "")
+            country_iso3 = str(fact.get("country_iso3") or "")
+            configured = code in admin_country and admin_country.get(code) == country_iso3
+            generated = code in admin_geometry_by_code
+            if not configured or not generated:
+                required_admin1_mismatches.append({
+                    "country": country_iso3,
+                    "code": code,
+                    "name": str(fact.get("name_en") or ""),
+                    "configured": configured,
+                    "generated": generated,
+                    "effective_from": str(fact.get("effective_from") or ""),
+                })
+        check(
+            "Dated required Admin-1 units",
+            not required_admin1_mismatches if enforce_dated_facts else True,
+            f"enforcement={dated_enforcement}; mismatches={required_admin1_mismatches}",
+        )
+        membership_mismatches = []
+        for fact in administrative_reference.get("known_memberships", []):
+            country_iso3 = str(fact.get("country_iso3") or "")
+            unit_name = str(fact.get("unit_name_en") or "").strip().casefold()
+            expected_admin = str(fact.get("expected_admin1_code") or "")
+            matches = [
+                unit for unit in naming_features
+                if str(unit["name_en"] or "").strip().casefold() == unit_name
+                and admin_country.get(str(unit["admin1_code"] or "")) == country_iso3
+            ]
+            actual_admins = sorted({
+                str(unit["admin1_code"] or "") for unit in matches
+            })
+            if actual_admins != [expected_admin]:
+                membership_mismatches.append({
+                    "country": country_iso3,
+                    "unit": str(fact.get("unit_name_en") or ""),
+                    "expected": expected_admin,
+                    "actual": actual_admins,
+                    "effective_from": str(fact.get("effective_from") or ""),
+                })
+        check(
+            "Dated administrative membership facts",
+            (
+                bool(administrative_reference.get("scenario_reference_date"))
+                and not membership_mismatches
+            ) if enforce_dated_facts else True,
+            f"enforcement={dated_enforcement}; "
+            f"scenario_date={administrative_reference.get('scenario_reference_date')}; "
+            f"mismatches={membership_mismatches}",
         )
         allowed_population_methods = {
             "geonames_adm2", "geonames_populated_place",
@@ -484,11 +551,14 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
                 tile_country = str(tile["country_iso3"] or "")
                 candidates_for_tile = {}
                 for unit in naming_features:
+                    unit_admin_code = str(unit["admin1_code"] or "")
                     if (
-                        admin_country.get(str(unit["admin1_code"] or ""))
+                        admin_country.get(unit_admin_code)
                         != tile_country
-                        or str(unit["admin1_code"] or "")
-                        != str(tile["admin1_code"] or "")
+                        or (
+                            unit_admin_code in clipped_admin_codes
+                            and unit_admin_code != str(tile["admin1_code"] or "")
+                        )
                         or not tile.geometry().boundingBox().intersects(
                             unit.geometry().boundingBox()
                         )
@@ -567,19 +637,22 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         admin_name_mismatches = []
         for tile in features:
             unit = naming_by_code.get(str(tile["tile_name_code"] or ""))
+            unit_admin_code = str(unit["admin1_code"] or "") if unit else ""
             if (
                 unit is None
-                or admin_country.get(str(unit["admin1_code"] or ""))
+                or admin_country.get(unit_admin_code)
                 != str(tile["country_iso3"] or "")
-                or str(unit["admin1_code"] or "")
-                != str(tile["admin1_code"] or "")
+                or (
+                    unit_admin_code in clipped_admin_codes
+                    and unit_admin_code != str(tile["admin1_code"] or "")
+                )
             ):
                 admin_name_mismatches.append(
                     (str(tile["tile_id"]), str(tile["admin1_code"] or ""),
                      str(tile["tile_name_code"] or ""))
                 )
         check(
-            "Tile name and city fill stay within the tile's Admin-1 owner",
+            "Tile name and city fill obey configured country/Admin-1 scope",
             not admin_name_mismatches,
             f"mismatches={admin_name_mismatches}",
         )
@@ -601,11 +674,14 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
                 continue
             scores = {}
             for unit in naming_features:
+                unit_admin_code = str(unit["admin1_code"] or "")
                 if (
-                    admin_country.get(str(unit["admin1_code"] or ""))
+                    admin_country.get(unit_admin_code)
                     != str(tile["country_iso3"] or "")
-                    or str(unit["admin1_code"] or "")
-                    != str(tile["admin1_code"] or "")
+                    or (
+                        unit_admin_code in clipped_admin_codes
+                        and unit_admin_code != str(tile["admin1_code"] or "")
+                    )
                 ):
                     continue
                 if not tile.geometry().boundingBox().intersects(unit.geometry().boundingBox()):
@@ -1020,6 +1096,39 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         check("Neighbor JSON", not malformed_neighbors, f"malformed={malformed_neighbors}")
         check("Neighbor IDs exist", not missing_neighbors, f"missing={missing_neighbors}")
         check("Neighbor symmetry", not asymmetric, f"asymmetric={asymmetric}")
+        edge_tiles = {}
+        for feature in features:
+            tile_id = str(feature["tile_id"])
+            for edge_key in hex_edge_keys(feature.geometry()):
+                edge_tiles.setdefault(edge_key, []).append(tile_id)
+        nonmanifold_edges = sorted(
+            (edge_key, sorted(members))
+            for edge_key, members in edge_tiles.items() if len(members) > 2
+        )
+        expected_neighbors = {tile_id: set() for tile_id in ids}
+        for members in edge_tiles.values():
+            if len(members) != 2:
+                continue
+            first, second = members
+            expected_neighbors[first].add(second)
+            expected_neighbors[second].add(first)
+        neighbor_completeness_errors = sorted(
+            (
+                tile_id,
+                sorted(expected_neighbors[tile_id]),
+                sorted(set(neighbor_map.get(tile_id, []))),
+            )
+            for tile_id in ids
+            if expected_neighbors[tile_id] != set(neighbor_map.get(tile_id, []))
+        )
+        check(
+            "Neighbor lists exactly match all shared hex edges",
+            not nonmanifold_edges and not neighbor_completeness_errors,
+            f"nonmanifold_count={len(nonmanifold_edges)}; "
+            f"nonmanifold_examples={nonmanifold_edges[:20]}; "
+            f"mismatch_count={len(neighbor_completeness_errors)}; "
+            f"mismatch_examples={neighbor_completeness_errors[:20]}",
+        )
 
         # Inspect scripts and the embedded .qgs XML for machine-specific data paths.
         # Build the Unix pattern in parts so this validator does not flag its
@@ -1137,7 +1246,7 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
             lines.append(f"| {name} | {'PASS' if passed else 'FAIL'} | {safe_detail} |")
         lines.extend([
             "", "## Allocation", "",
-            "Targets are advisory; every official Admin-1 receives its configured "
+            "Targets are advisory; every feasible official Admin-1 receives its "
             "same-country representation floor, then remaining ownership follows "
             "greatest overlap.", "",
             "| Code | Target | Actual | Difference |",

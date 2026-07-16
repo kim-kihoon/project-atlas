@@ -1,0 +1,54 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-07-16T00:32:43Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "relation",
+  "id": 356540,
+  "bounds": {
+    "minlat": 39.0684345,
+    "minlon": 124.1253930,
+    "maxlat": 40.6716042,
+    "maxlon": 126.3748124
+  },
+  "tags": {
+    "ISO3166-2": "KP-03",
+    "admin_level": "4",
+    "alt_name:cs": "Pchjonganbuk",
+    "alt_name:en": "Pyonganbuk",
+    "alt_name:sk": "Pchjonganbuk",
+    "boundary": "administrative",
+    "is_in:country": "North Korea",
+    "is_in:country_code": "KP",
+    "name": "평안북도",
+    "name:cs": "Severní Pchjongan",
+    "name:cy": "Gogledd Pyongan",
+    "name:de": "Nord-P’yŏngan",
+    "name:en": "North Pyongan",
+    "name:es": "Pyongan del Norte",
+    "name:fr": "Pyongan du Nord",
+    "name:ja": "平安北道",
+    "name:ko": "평안북도",
+    "name:ko-Hani": "平安北道",
+    "name:ko-Latn": "P’yŏngan-pukto",
+    "name:ru": "Пхёнан-Пукто",
+    "name:sk": "Pchjongan",
+    "name:vi": "Bình An Bắc",
+    "name:zh": "平安北道",
+    "name:zh-Hant": "平安北道",
+    "note": "North Korea's Korean Central Television began broadcasting maps of administrative boundaries that have changed since February 10, 2023 in its weather forecasts.",
+    "population": "2728662",
+    "source": "2023년 2월 10일 조선중앙TV 날씨 예보",
+    "source:population": "2008 North Korean census",
+    "type": "boundary",
+    "wikidata": "Q109348"
+  }
+}
+
+  ]
+}

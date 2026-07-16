@@ -9,6 +9,20 @@ The QGIS display language is controlled by `display_language`; it is currently
 set to English so every tile and Admin-1 label uses one language consistently.
 The authoritative cross-country allocation and validation contract is
 `GLOBAL_MAP_RULES.md`.
+Administrative-reference findings, including the accepted frozen-snapshot
+trade-offs, are tracked in
+`reports/korea_administrative_reference_audit.md`. Structural validation and
+historical administrative accuracy are separate release gates.
+The latest end-to-end result is recorded in
+`reports/korea_full_audit_report.md`.
+The latest PRK boundary-source acquisition findings are recorded in
+`reports/prk_boundary_source_update_2026-07-16.md`.
+The `Seo`/GeoNames investigation and restored Admin-1 representation are
+recorded in `reports/korea_data_quality_findings.md`.
+The detailed CGAZ ADM1/ADM2 consistency investigation covering Dalseong,
+Gwangju metropolitan districts, Gwangju city classification and the missing
+Yeonggwang boundary is recorded in
+`reports/korea_cgaz_hierarchy_consistency_audit.md`.
 
 There is no fixed national tile count. A tile belongs to KOR or PRK only when
 that country's land occupies more of it than every neighboring country and the
@@ -17,29 +31,28 @@ same tile or assign a tile to an administrative area across the national border.
 Country-border edges are stored separately from ordinary admin-border edges.
 Tiles are then assigned to the same-country administrative area occupying their
 largest portion.
-Every official Admin-1 receives one positive-overlap representative tile inside
-its dominant country whenever feasible, without taking another official area's
-last tile. This prevents small metropolitan administrations from disappearing.
-Where possible, the representative is the tile already carrying a city/county
-naming unit from that same Admin-1, keeping visible name and ownership aligned.
-All remaining tiles retain their greatest-overlap owner. Historical target counts
-are advisory report values, not allocation quotas.
+Every feasible official Admin-1 receives one positive-overlap same-country
+representative without taking another official area's last tile. Remaining
+tiles retain their greatest-overlap owner; historical targets stay advisory.
 
-Each playable country has its own configurable authoritative Admin-1 source.
-KOR uses the official SGIS 2025 Q2 17-area boundary dataset; PRK currently uses
-Natural Earth. A separate global Natural Earth layer supplies nearby non-playable
-country competitors. For a playable country, its national land geometry is the
-union of its authoritative Admin-1 areas, so country and Admin-1 overlap tests
-cannot silently use different boundary vintages.
+ADM0, ADM1 and ADM2 now come from one pinned geoBoundaries CGAZ 6.0.0 global
+snapshot (commit `1289e40e366c7b320550be1ee0614a9472d572d4`). This prioritizes
+worldwide consistency, stable identifiers and reproducibility over modern
+country-specific corrections. SGIS, Natural Earth, NGII and OSM files remain
+audit evidence but are not active ownership inputs.
+The snapshot has known KOR ADM1/ADM2 hierarchy contradictions. They are retained
+and reported rather than corrected with Korea-only parent or geometry patches.
+This preserves one reproducible worldwide rule; it does not mean that every
+displayed Korean administrative relationship is modern or semantically exact.
 
 Administrative ownership and city type are independent. For example, a tile
 containing Yongin remains owned by Gyeonggi (`admin1_code=KR-41`) while its
 real-city anchor can have a separate `city_class`. City status changes fill
 color, never administrative borders.
 
-Tile display naming is classified and clipped by the current authoritative
-Admin-1 boundary. For every hex, only intersecting cities and counties assigned
-to that tile's final Admin-1 owner are candidates. Naming units are processed globally in
+Tile display naming follows Admin-1 ownership. Naming units are assigned and
+clipped to their greatest-overlap authoritative Admin-1; each tile considers
+only positive-overlap units belonging to its final owner. Units are processed globally in
 descending population order, and each reserves its maximum-overlap still-free
 tile. Only after this unique-representative pass are remaining tiles filled by
 their greatest-overlap intersecting unit; exact area ties use population and
@@ -55,15 +68,13 @@ When a represented city or county naming unit occupies multiple tiles, all
 tiles carrying that same naming-unit code inherit the representative city
 anchor's city/metropolis fill. Only that representative stores the actual city
 population and initial-city gameplay state, so the national total is not
-duplicated. The complete official capital Admin-1 tile group receives one yellow
-outer outline, including differently named tiles in that administration;
-internal shared edges do not receive that outline.
-Official capital administrations receive the same one-tile representation floor
-as every other Admin-1; capital display naming and outlines remain independent.
+duplicated. The complete official capital Admin-1 group receives one yellow
+outer outline; internal shared edges do not receive that outline. Capital
+Admin-1 areas receive the same feasible one-tile floor as other official areas.
 
 The map uses exactly three tile fill classes: ordinary administrative tile,
 light-blue city, and dark-navy metropolis. Capital is a separate yellow outline
-around the complete official capital Admin-1 tile group, not a fill class. Each represented real
+around the complete official capital Admin-1 group, not a fill class. Each represented real
 city receives one anchor tile: 100,000-999,999 is an initial city and 1,000,000+
 is an initial metropolis. Its one game-population value is the GeoNames city
 population. The 2020 WorldPop raster distributes the remaining population over
@@ -137,12 +148,14 @@ being mistaken for a world-ready pipeline.
 - `reports/allocation_report.md`: target and actual tile allocation.
 - `reports/validation_report.md`: release-gate validation results.
 - `reports/global_readiness_report.md`: separate world-pipeline readiness audit.
+- `reports/korea_cgaz_hierarchy_consistency_audit.md`: known KOR hierarchy and
+  completeness conflicts in the pinned CGAZ snapshot.
 - `GLOBAL_MAP_RULES.md`: authoritative global allocation and validation rules.
 - `exports/Atlas_Korea_Tiles.geojson` and `.csv`: Unreal-oriented exports.
 
-The current deterministic build contains 161 KOR tiles and 204 PRK tiles.
-Adding PRK is regression-gated against all 161 existing KOR tiles and their
-previous Admin-1 counts.
+The current deterministic CGAZ build contains 158 KOR tiles and 206 PRK tiles,
+364 total. Tile IDs use the immutable grid row/column namespace and do not
+contain country or administrative ownership.
 
 QGIS terms for beginners: a **layer** is one collection of map features; a
 **GeoPackage** is one database file that can hold several layers; a **CRS** is
