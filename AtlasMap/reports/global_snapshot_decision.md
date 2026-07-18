@@ -35,9 +35,14 @@ identifiers are unique.
   the modern separate Rason/Kaesong arrangement. This is an intentional frozen
   snapshot limitation.
 - Several KOR metropolitan extents are historically smaller than current
-  official extents. At 605.21 km2 per hex they can receive zero tiles in the
-  initial greatest-overlap pass, so the common feasible one-tile official-area
-  representation rule applies.
+  official extents. The prototype grid was subsequently reduced globally from
+  605.21 km2 to 200.00 km2 per hex to improve internal-development spatial
+  detail without city-specific scale exceptions. Small official areas may
+  still require the common feasible one-tile representation rule.
+- The finer grid exposed small places where the frozen ADM2 layer has no
+  positive overlap inside an assigned Admin-1 tile. In that exact case only,
+  the pipeline uses the same-owner Admin-1 name as a zero-population coverage
+  fallback. It does not compete for a representative tile or alter ownership.
 - The KOR ADM1 and ADM2 layers are not internally hierarchical in several
   metropolitan areas. Dalseong-gun overlaps North Gyeongsang by 98.707% and
   Daegu by only 1.293%; Gwangsan-gu overlaps South Jeolla by 98.597% and

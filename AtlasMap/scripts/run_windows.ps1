@@ -1,12 +1,15 @@
-param(
-    [ValidateSet("all", "build", "validate", "global-validate", "export")]
+﻿param(
+    [ValidateSet("all", "registry", "build", "borders", "validate", "global-validate", "export")]
     [string]$Stage = "all"
 )
 
 $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$Config = Join-Path $Root "config\atlas_korea.json"
-
+$Config = Join-Path $Root "config\atlas_east_asia.json"
+$DggalRuntime = Join-Path $Root ".runtime\dggal"
+$DggalBin = Join-Path $DggalRuntime "bin"
+$env:PYTHONPATH = "$DggalRuntime;$env:PYTHONPATH"
+$env:PATH = "$DggalBin;$env:PATH"
 if ($Stage -eq "global-validate") {
     $Python = Get-Command python -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $Python) {
@@ -37,7 +40,6 @@ if ($env:QGIS_PROCESS) {
         }
     }
 }
-
 if (-not $QgisProcess -or -not (Test-Path $QgisProcess)) {
     throw "QGIS Processing executable not found. Install QGIS LTR 3.44 or set QGIS_PROCESS."
 }
@@ -56,18 +58,24 @@ function Invoke-AtlasAlgorithm([string]$ScriptName) {
 }
 
 switch ($Stage) {
-    "build" { Invoke-AtlasAlgorithm "build_korea_map.py" }
+    "registry" { Invoke-AtlasAlgorithm "build_country_registry.py" }
+    "build" {
+        Invoke-AtlasAlgorithm "build_country_registry.py"
+        Invoke-AtlasAlgorithm "build_east_asia_map.py"
+    }
+    "borders" { Invoke-AtlasAlgorithm "refresh_border_presentation.py" }
     "validate" {
-        Invoke-AtlasAlgorithm "validate_korea_map.py"
-        if (-not (Select-String -Path (Join-Path $Root "reports\validation_report.md") -SimpleMatch 'Overall result: **PASS**' -Quiet)) {
+        Invoke-AtlasAlgorithm "validate_east_asia_map.py"
+        if (-not (Select-String -Path (Join-Path $Root "reports\east_asia_validation_report.md") -SimpleMatch 'Overall result: **PASS**' -Quiet)) {
             throw "Validation report did not pass."
         }
     }
     "export" { Invoke-AtlasAlgorithm "export_for_unreal.py" }
     "all" {
-        Invoke-AtlasAlgorithm "build_korea_map.py"
-        Invoke-AtlasAlgorithm "validate_korea_map.py"
-        if (-not (Select-String -Path (Join-Path $Root "reports\validation_report.md") -SimpleMatch 'Overall result: **PASS**' -Quiet)) {
+        Invoke-AtlasAlgorithm "build_country_registry.py"
+        Invoke-AtlasAlgorithm "build_east_asia_map.py"
+        Invoke-AtlasAlgorithm "validate_east_asia_map.py"
+        if (-not (Select-String -Path (Join-Path $Root "reports\east_asia_validation_report.md") -SimpleMatch 'Overall result: **PASS**' -Quiet)) {
             throw "Validation report did not pass."
         }
         Invoke-AtlasAlgorithm "export_for_unreal.py"

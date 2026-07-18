@@ -2,7 +2,7 @@
 
 Status: authoritative design contract
 
-Scope: the Korean Peninsula prototype and every country added later
+Scope: the East Asia six-country milestone and every country added later
 
 Encoding: UTF-8
 
@@ -35,18 +35,33 @@ Encoding: UTF-8
 
 ## 2. Global grid and tile identity
 
-1. Every country shares one immutable regular-hex grid. Do not generate a new
-   grid origin at each border.
-2. Final game tiles are complete regular hexagons and are never clipped to a
-   coastline or administrative boundary.
-3. The current prototype target area is 605.21 km2. Tolerances and orientation
-   are configuration values.
-4. A tile ID is derived only from immutable grid coordinates and orientation.
-   It must not contain country, Admin-1, city name or current ownership.
-5. Neighbor relationships are derived from grid coordinates or normalized
-   shared-edge keys and must be symmetric.
-6. EPSG:5179 is valid only for the Korean prototype. Before a world build, Atlas
-   must freeze a global CRS or DGGS plus antimeridian, world-wrap and polar rules.
+1. Every country and ocean shares one immutable OGC ISEA3H level-11 discrete
+   global grid on the WGS84 authalic sphere. The grid never resets at a national,
+   regional, antimeridian or polyhedral-face boundary.
+2. The complete world grid contains 1,771,472 cells: 1,771,460 hexagons and the
+   12 pentagons mathematically required to close a sphere. A canonical hexagon
+   has an area of about 287.933536 km2 and a canonical pentagon about
+   239.944614 km2.
+3. Final game cells are never clipped to coastlines or administrative
+   boundaries. Geographic proportions remain global and no city receives a
+   different resolution.
+4. Canonical tile IDs are `ATLAS_ISEA3H_L11_{zone_text_id}` and derive only from
+   the pinned DGGRS and canonical DGGAL zone identity. They never contain
+   ownership, Admin-1, city or mutable gameplay state.
+5. Neighbor relationships come from the canonical spherical DGGRS topology and
+   must be symmetric. Hexagons have six canonical neighbors and pentagons five;
+   a regional subset may expose fewer selected neighbors at its boundary.
+6. ISEA face-local triangular subdivision meshes are welded across common
+   vertices and edges before projection to the sphere and dual-cell
+   construction. Final cells are therefore one continuous global mesh, not 20
+   independently rendered planar grids, and have no antimeridian or polar seam.
+7. DGGAL 0.0.6 is the pinned canonical grid engine. It is a scripted runtime
+   dependency, not a QGIS plugin. QGIS core handles geometry, styling and file
+   output.
+8. `EPSG:8857` Equal Earth is the regional analysis/intersection CRS.
+   `EPSG:3857` Web Mercator is the QGIS project and preview display CRS so the
+   2D map retains a familiar cylindrical appearance. Projected geometry never
+   defines canonical cell identity, cell type, spherical area or adjacency.
 
 ## 3. Country and ocean ownership
 
@@ -94,7 +109,12 @@ Ownership and display naming are independent dimensions.
    and then stable unit code only as tie-breakers.
 8. Any positive overlap is eligible. A nearest-only, zero-overlap fallback is
    forbidden.
-9. Multiple tiles may carry the same naming-unit code. The algorithm is identical
+9. If and only if a tile has no positive overlap with any eligible ADM2 or
+   equivalent naming unit, use the same-owner Admin-1 geometry and name as an
+   auditable coverage fallback. It must still have positive overlap, has zero
+   naming-allocation population, and never participates in the unique
+   representative pass or changes ownership.
+10. Multiple tiles may carry the same naming-unit code. The algorithm is identical
    for every country and may not contain country-specific naming branches.
 
 ## 6. Cities and population
@@ -116,13 +136,20 @@ Ownership and display naming are independent dimensions.
 
 ## 7. Capitals
 
-1. Capital status follows the represented capital naming-unit code and does not
-   change ownership or fill class.
-2. Draw one yellow outline on the exterior edges of the complete official
-   capital ADM1 tile group. Cancel internal shared edges.
-3. The capital ADM1 receives the same feasible one-tile representation floor as
-   every other official ADM1.
-4. A capital name may cross neither national nor Admin-1 ownership boundaries.
+1. `is_capital` is display-group membership and is true on every tile carrying
+   the represented capital naming-unit code. It does not change ownership or
+   fill class.
+2. Draw one yellow outline only on the exterior edges of the complete
+   capital-name tile group. Cancel shared edges between tiles carrying the same
+   capital naming-unit code. Do not outline the rest of the capital ADM1 merely
+   because it belongs to that administration.
+3. `is_capital_anchor` identifies exactly one representative real-city anchor
+   per country. Capital-only gameplay bonuses, facilities or slots apply to this
+   anchor alone, never to every yellow-outlined tile.
+4. The capital ADM1 receives the same feasible one-tile representation floor as
+   every other official ADM1; capital display and gameplay status never alter
+   Admin-1 allocation.
+5. A capital name may cross neither national nor Admin-1 ownership boundaries.
 
 ## 8. QGIS presentation
 
@@ -133,7 +160,20 @@ Ownership and display naming are independent dimensions.
 3. Show `tile_id` only at a sufficiently close scale.
 4. Hide Admin-1 summary labels at close scales so they cannot cover tile names.
 5. Keep source boundaries in a separate toggleable validation group.
-6. Use project-relative paths and QGIS core functionality only.
+6. Use project-relative paths and QGIS core functionality for map processing
+   and presentation. Do not require a QGIS plugin.
+7. Render topology-derived Admin-1, country, exterior and capital logical sides
+   with flat line caps and miter joins. Border widths must remain stronger than
+   ordinary tile outlines without turning short spherical sides into dotted or
+   blob-like marks at overview scale.
+8. Preserve every canonical logical side as validation evidence. For QGIS
+   presentation, line-merge only contiguous sides of the same boundary class
+   and owner pair into continuous render chains; this must not dissolve source
+   polygons, change ownership, or alter canonical adjacency.
+9. Do not assume the DGGRS neighbor-list order equals refined boundary-side
+   order. Match every side one-to-one to the nearest neighboring zone centroid
+   on the sphere, and validate that each rendered shared side lies on both
+   participating cell boundaries.
 
 ## 9. Global processing requirements
 
@@ -148,30 +188,32 @@ Ownership and display naming are independent dimensions.
 
 ## 10. Validation gates
 
-The Korean release gate and world-readiness gate are separate.
+The East Asia release gate and world-readiness gate are separate.
 
 Every regional release must verify:
 
-- pinned sources and expected CRS;
-- complete valid regular hexagons and target area tolerance;
+- pinned sources and expected display/analysis CRS;
+- canonical ISEA3H level-11 IDs, DGGAL round trips, cell types and spherical areas;
+- complete valid uncut cells, including correct five-sided pentagons where present;
 - greatest-overlap country-or-ocean ownership;
 - one feasible positive-overlap representative per official Admin-1, with
   greatest-overlap ownership for every remaining tile;
 - no ownership overrides and no tile overlaps;
 - positive-overlap same-country naming allocation;
+- Admin-1 naming fallback only where no eligible ADM2/equivalent overlap exists;
 - unique stable ownership-independent IDs;
-- complete symmetric adjacency;
+- complete symmetric canonical DGGRS adjacency and complete logical-side outlines;
 - exact national population reconciliation;
 - three fills and correct capital naming-group outlines;
 - relative shared paths, successful exports and generated preview.
 
 The world-readiness gate additionally requires:
 
-- frozen global CRS/DGGS, antimeridian and polar policies;
+- frozen global ISEA3H level, DGGAL version, 1,771,472-cell count and 12-pentagon contract;
 - a data-driven global country/admin registry;
 - spatially indexed boundary lookup and scalable partitioning;
-- sample tests for islands, enclaves, disputed areas, antimeridian crossings and
-  polar regions;
+- partitioned/LOD-capable world processing plus sample tests for islands,
+  enclaves, disputed areas, all 12 pentagons, antimeridian crossings and polar regions;
 - country-neutral ADM1/ADM2 hierarchy-coherence and source-completeness audits
   that report contradictions without silently repairing ownership;
 - no country-specific ownership or naming exceptions.

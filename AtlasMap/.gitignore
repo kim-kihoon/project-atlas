@@ -10,6 +10,8 @@
 # Runtime caches and logs
 __pycache__/
 *.py[cod]
+.cache/
+.runtime/
 logs/*
 !logs/.gitkeep
 
@@ -21,4 +23,3 @@ reports/*.tmp
 # Platform metadata
 .DS_Store
 Thumbs.db
-

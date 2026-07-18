@@ -1,14 +1,21 @@
-# Atlas Korean Peninsula QGIS Map
+# Atlas East Asia QGIS Map
 
-This directory contains the reproducible GIS pipeline for the Korean Peninsula
-prototype map used by **Atlas**. It builds the Republic of Korea and the
-Democratic People's Republic of Korea together on one common regular-hex grid
-in EPSG:5179. Each tile goes first to its dominant country-or-ocean overlap,
+This directory contains the reproducible GIS pipeline for the **Atlas** East
+Asia milestone: KOR, PRK, CHN, MNG, JPN and TWN. All six countries use one
+continuous OGC ISEA3H level-11 grid on the WGS84 authalic sphere. The global
+contract contains 1,771,460 hexagons and 12 pentagons; canonical identity,
+spherical area and adjacency come from pinned DGGAL 0.0.6. QGIS uses
+`EPSG:8857` Equal Earth to calculate regional intersections, while the QGIS
+project and preview use `EPSG:3857` Web Mercator for a familiar cylindrical
+2D appearance. Each tile goes first to its dominant country-or-ocean overlap,
 then only to a first-level administrative area belonging to that same country.
 The QGIS display language is controlled by `display_language`; it is currently
 set to English so every tile and Admin-1 label uses one language consistently.
 The authoritative cross-country allocation and validation contract is
 `GLOBAL_MAP_RULES.md`.
+The earlier planar-grid experiment is retained as superseded design evidence.
+The implemented spherical six-country result and finite-resolution findings are
+recorded in `reports/east_asia_spherical_implementation_report.md`.
 Administrative-reference findings, including the accepted frozen-snapshot
 trade-offs, are tracked in
 `reports/korea_administrative_reference_audit.md`. Structural validation and
@@ -24,9 +31,9 @@ Gwangju metropolitan districts, Gwangju city classification and the missing
 Yeonggwang boundary is recorded in
 `reports/korea_cgaz_hierarchy_consistency_audit.md`.
 
-There is no fixed national tile count. A tile belongs to KOR or PRK only when
+There is no fixed national tile count. A tile belongs to one of the six configured countries only when
 that country's land occupies more of it than every neighboring country and the
-ocean. The two countries are evaluated simultaneously, so they cannot claim the
+ocean. All six countries are evaluated simultaneously, so they cannot claim the
 same tile or assign a tile to an administrative area across the national border.
 Country-border edges are stored separately from ordinary admin-border edges.
 Tiles are then assigned to the same-country administrative area occupying their
@@ -59,7 +66,12 @@ their greatest-overlap intersecting unit; exact area ties use population and
 then stable unit code. There is no minimum overlap threshold. Display-name
 population is internal naming
 evidence only and is not copied into the game tile.
-The same configuration-driven rule applies to KOR, PRK, and every country added
+If a tile intersects no eligible ADM2/equivalent unit at all, the same-owner
+Admin-1 name is used as a positive-overlap coverage fallback. This fallback has
+zero allocation population, cannot reserve a representative tile, and never
+changes ownership; it exists only to handle gaps exposed by the finer global
+grid without inventing country-specific geometry.
+The same configuration-driven rule applies to all six countries and every country added
 later; there are no country-specific naming exceptions.
 All naming units compete in descending actual-population order. A smaller unit
 cannot displace an already matched larger unit, although spatial overlap and the
@@ -68,13 +80,17 @@ When a represented city or county naming unit occupies multiple tiles, all
 tiles carrying that same naming-unit code inherit the representative city
 anchor's city/metropolis fill. Only that representative stores the actual city
 population and initial-city gameplay state, so the national total is not
-duplicated. The complete official capital Admin-1 group receives one yellow
-outer outline; internal shared edges do not receive that outline. Capital
-Admin-1 areas receive the same feasible one-tile floor as other official areas.
+duplicated. Every tile carrying the capital naming-unit code receives
+`is_capital`, and only the exterior of that complete capital-name tile group
+receives the yellow outline. Differently named tiles in the capital Admin-1 are
+not included. Exactly one representative tile per country receives
+`is_capital_anchor`; future capital-only gameplay effects apply only there.
+Capital Admin-1 areas still receive the same feasible one-tile floor as other
+official areas.
 
 The map uses exactly three tile fill classes: ordinary administrative tile,
 light-blue city, and dark-navy metropolis. Capital is a separate yellow outline
-around the complete official capital Admin-1 group, not a fill class. Each represented real
+around the complete capital-name tile group, not a fill class. Each represented real
 city receives one anchor tile: 100,000-999,999 is an initial city and 1,000,000+
 is an initial metropolis. Its one game-population value is the GeoNames city
 population. The 2020 WorldPop raster distributes the remaining population over
@@ -96,7 +112,10 @@ display names. They are not alternative game-population fields.
 Administrative borders are the complete topology-derived outlines of same-owner
 tile groups. Every hex edge is keyed explicitly: edges shared by tiles with the
 same `admin1_code` cancel, while different-owner and exterior edges remain and
-render once above the tile fills. The separate coastal-line layer is temporarily
+render once above the tile fills. Flat caps and miter joins prevent the many
+short spherical logical sides from appearing as beads or dots at overview
+scale. The raw side layers remain in the GeoPackage for validation, while QGIS
+renders topology-derived continuous chain layers. The separate coastal-line layer is temporarily
 omitted until the administrative borders and tile layout are final. No
 city-marker layer is displayed or published.
 
@@ -110,7 +129,7 @@ From this directory:
 
 The runner locates QGIS LTR, configures its PROJ database, builds the
 GeoPackage/QGIS project, validates the result, and exports Unreal-friendly
-files. Run individual stages with `build`, `validate`, or `export`.
+files. Run individual stages with `registry`, `build`, `validate`, or `export`.
 
 ## Quick start (Windows PowerShell)
 
@@ -123,7 +142,7 @@ path of `qgis_process.exe` before running either launcher.
 
 ## Global-readiness audit
 
-The Korean Peninsula release gate and the world-map readiness gate are separate.
+The East Asia release gate and the world-map readiness gate are separate.
 Run the structural world-map audit through the platform launcher:
 
 ```bash
@@ -136,26 +155,33 @@ Run the structural world-map audit through the platform launcher:
 
 The audit writes `reports/global_readiness_report.md` and exits nonzero while
 blocking global requirements remain. A global-readiness FAIL does not replace
-or invalidate the Korea geometry validation; it prevents the prototype from
+or invalidate the East Asia geometry validation; it prevents the milestone from
 being mistaken for a world-ready pipeline.
 
 ## Main outputs
 
-- `Atlas_Korea.qgz`: QGIS project; open this first in QGIS.
-- `data/processed/Atlas_Korea.gpkg`: source, city/county naming reference,
+- `Atlas_East_Asia.qgz`: QGIS project; open this first in QGIS.
+- `data/processed/Atlas_East_Asia.gpkg`: source, city/county naming reference,
   candidates, final tiles, and admin borders. Coastal lines are deferred.
-- `previews/Atlas_Korea_Overview.png`: rendered overview.
-- `reports/allocation_report.md`: target and actual tile allocation.
-- `reports/validation_report.md`: release-gate validation results.
+- `previews/Atlas_East_Asia_Overview.png`: rendered overview.
+- `reports/east_asia_allocation_report.md`: target and actual tile allocation.
+- `reports/east_asia_validation_report.md`: release-gate validation results.
 - `reports/global_readiness_report.md`: separate world-pipeline readiness audit.
+- `reports/east_asia_spherical_implementation_report.md`: spherical-grid decision,
+  six-country counts, known infeasible Admin-1 units and release evidence.
+- `config/country_registry_east_asia.json`: generated four-country registry
+  appended to the inline KOR/PRK baseline.
 - `reports/korea_cgaz_hierarchy_consistency_audit.md`: known KOR hierarchy and
   completeness conflicts in the pinned CGAZ snapshot.
 - `GLOBAL_MAP_RULES.md`: authoritative global allocation and validation rules.
-- `exports/Atlas_Korea_Tiles.geojson` and `.csv`: Unreal-oriented exports.
+- `exports/Atlas_East_Asia_Tiles.geojson` and `.csv`: Unreal-oriented exports.
 
-The current deterministic CGAZ build contains 158 KOR tiles and 206 PRK tiles,
-364 total. Tile IDs use the immutable grid row/column namespace and do not
-contain country or administrative ownership.
+Current deterministic tile counts are KOR 332, PRK 418, CHN 32,215, JPN 1,262,
+MNG 5,461 and TWN 124, for 39,812 cells total. This regional selection contains
+39,811 hexagons and one of the global grid's 12 pentagons. Counts are derived
+from country-or-ocean dominance and recorded in the allocation report. Tile IDs
+use `ATLAS_ISEA3H_L11_{zone_text_id}` and do not contain country or
+administrative ownership.
 
 QGIS terms for beginners: a **layer** is one collection of map features; a
 **GeoPackage** is one database file that can hold several layers; a **CRS** is

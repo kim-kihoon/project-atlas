@@ -1,4 +1,4 @@
-"""Export Atlas Korea tiles to GeoJSON and CSV."""
+"""Export Atlas East Asia tiles to GeoJSON and CSV."""
 
 import csv
 import json
@@ -35,10 +35,10 @@ def resolve(root, relative_path):
 
 class AtlasKoreaExport(QgsProcessingAlgorithm):
     def name(self):
-        return "atlas_korea_export"
+        return "atlas_east_asia_export"
 
     def displayName(self):
-        return tr("Export Atlas Korea tiles for Unreal")
+        return tr("Export Atlas East Asia tiles for Unreal")
 
     def group(self):
         return tr("Atlas")
@@ -53,7 +53,7 @@ class AtlasKoreaExport(QgsProcessingAlgorithm):
         return AtlasKoreaExport()
 
     def initAlgorithm(self, config=None):
-        self.addParameter(QgsProcessingParameterFile(CONFIG, tr("atlas_korea.json"), extension="json"))
+        self.addParameter(QgsProcessingParameterFile(CONFIG, tr("atlas_east_asia.json"), extension="json"))
         self.addOutput(QgsProcessingOutputFile(OUTPUT_GEOJSON, tr("GeoJSON")))
         self.addOutput(QgsProcessingOutputFile(OUTPUT_CSV, tr("CSV")))
 
@@ -66,9 +66,9 @@ class AtlasKoreaExport(QgsProcessingAlgorithm):
         csv_path = resolve(root, settings["outputs"]["csv"])
         geojson.parent.mkdir(parents=True, exist_ok=True)
         csv_path.parent.mkdir(parents=True, exist_ok=True)
-        layer = QgsVectorLayer(f"{gpkg}|layername=korea_tiles", "korea_tiles", "ogr")
+        layer = QgsVectorLayer(f"{gpkg}|layername=east_asia_tiles", "east_asia_tiles", "ogr")
         if not layer.isValid():
-            raise QgsProcessingException(f"Invalid korea_tiles layer: {gpkg}")
+            raise QgsProcessingException(f"Invalid east_asia_tiles layer: {gpkg}")
 
         options = QgsVectorFileWriter.SaveVectorOptions()
         options.driverName = "GeoJSON"
@@ -93,4 +93,3 @@ class AtlasKoreaExport(QgsProcessingAlgorithm):
                 writer.writerow(row)
         feedback.setProgress(100)
         return {OUTPUT_GEOJSON: str(geojson), OUTPUT_CSV: str(csv_path)}
-

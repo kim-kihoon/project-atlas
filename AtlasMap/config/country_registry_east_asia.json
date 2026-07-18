@@ -1,0 +1,1220 @@
+{
+  "schema_version": 1,
+  "generator": "scripts/build_country_registry.py",
+  "boundary_snapshot": "CGAZ-6.0.0",
+  "countries": [
+    {
+      "country": {
+        "iso3": "CHN",
+        "iso2": "CN",
+        "name_ko": null,
+        "name_en": "People's Republic of China"
+      },
+      "admin1_source": {
+        "path": "data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM1.zip",
+        "archive_member": "geoBoundariesCGAZ_ADM1.shp",
+        "filter_field": "shapeGroup",
+        "filter_value": "CHN",
+        "code_field": "shapeID",
+        "name_field": "shapeName",
+        "source_year": 2023,
+        "snapshot_version": "CGAZ-6.0.0",
+        "code_map": {
+          "43563684B67556328368055": "CHN-43563684B67556328368055",
+          "43563684B59914390554750": "CHN-43563684B59914390554750",
+          "43563684B30737817496648": "CHN-43563684B30737817496648",
+          "43563684B84540832148656": "CHN-43563684B84540832148656",
+          "43563684B78583622565599": "CHN-43563684B78583622565599",
+          "43563684B87813050901813": "CHN-43563684B87813050901813",
+          "43563684B64987462919315": "CHN-43563684B64987462919315",
+          "43563684B73528730180553": "CHN-43563684B73528730180553",
+          "43563684B32591653033375": "CHN-43563684B32591653033375",
+          "43563684B97743196909507": "CHN-43563684B97743196909507",
+          "43563684B41908353419915": "CHN-43563684B41908353419915",
+          "43563684B14397599951889": "CHN-43563684B14397599951889",
+          "43563684B75549295130005": "CHN-43563684B75549295130005",
+          "43563684B64367354813847": "CHN-43563684B64367354813847",
+          "43563684B96917371447908": "CHN-43563684B96917371447908",
+          "43563684B19802372559419": "CHN-43563684B19802372559419",
+          "43563684B58995436924100": "CHN-43563684B58995436924100",
+          "43563684B46172434476792": "CHN-43563684B46172434476792",
+          "43563684B64666899633249": "CHN-43563684B64666899633249",
+          "43563684B62959128536432": "CHN-43563684B62959128536432",
+          "43563684B84701301190484": "CHN-43563684B84701301190484",
+          "43563684B34303967365755": "CHN-43563684B34303967365755",
+          "43563684B17418114845297": "CHN-43563684B17418114845297",
+          "43563684B11053367304830": "CHN-43563684B11053367304830",
+          "43563684B58229551045164": "CHN-43563684B58229551045164",
+          "43563684B26929678147954": "CHN-43563684B26929678147954",
+          "43563684B3982601277390": "CHN-43563684B3982601277390",
+          "43563684B50492231896073": "CHN-43563684B50492231896073",
+          "43563684B95381459098578": "CHN-43563684B95381459098578",
+          "43563684B55920014778896": "CHN-43563684B55920014778896",
+          "43563684B97104103456250": "CHN-43563684B97104103456250",
+          "43563684B69230098435171": "CHN-43563684B69230098435171",
+          "43563684B38891657012300": "CHN-43563684B38891657012300"
+        }
+      },
+      "city_source": {
+        "path": "data/source/CN.zip",
+        "member": "CN.txt",
+        "provider": "GeoNames",
+        "country_code": "CN",
+        "minimum_population": 100000,
+        "capital_geoname_id": "1816670",
+        "canonical_aliases": {},
+        "names_ko": {}
+      },
+      "tile_naming": {
+        "boundary_path": "data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM2.zip",
+        "boundary_archive_member": "geoBoundariesCGAZ_ADM2.shp",
+        "boundary_filter_field": "shapeGroup",
+        "boundary_filter_value": "CHN",
+        "boundary_provider": "geoBoundaries CGAZ 6.0.0",
+        "snapshot_version": "CGAZ-6.0.0",
+        "boundary_year": 2023,
+        "alternate_names_path": "data/source/geonames-alternatenames-CN.zip",
+        "alternate_names_member": "CN.txt",
+        "minimum_tile_share": 0.05,
+        "require_same_country": true,
+        "require_same_admin1": true,
+        "allocation_policy": "population_descending_unique_representatives_then_greatest_overlap_fill",
+        "aggregate_admin1_codes": [
+          "CHN-43563684B17418114845297",
+          "CHN-43563684B32591653033375",
+          "CHN-43563684B69230098435171",
+          "CHN-43563684B84701301190484",
+          "CHN-43563684B97104103456250",
+          "CHN-43563684B97743196909507"
+        ],
+        "geonames_admin1_codes": {
+          "01": "CHN-43563684B75549295130005",
+          "02": "CHN-43563684B73528730180553",
+          "03": "CHN-43563684B87813050901813",
+          "04": "CHN-43563684B64367354813847",
+          "05": "CHN-43563684B3982601277390",
+          "06": "CHN-43563684B46172434476792",
+          "07": "CHN-43563684B30737817496648",
+          "08": "CHN-43563684B55920014778896",
+          "09": "CHN-43563684B96917371447908",
+          "10": "CHN-43563684B58229551045164",
+          "11": "CHN-43563684B64987462919315",
+          "12": "CHN-43563684B41908353419915",
+          "13": "CHN-43563684B50492231896073",
+          "14": "CHN-43563684B19802372559419",
+          "15": "CHN-43563684B11053367304830",
+          "16": "CHN-43563684B59914390554750",
+          "18": "CHN-43563684B78583622565599",
+          "19": "CHN-43563684B26929678147954",
+          "20": "CHN-43563684B95381459098578",
+          "21": "CHN-43563684B64666899633249",
+          "22": "CHN-43563684B17418114845297",
+          "24": "CHN-43563684B34303967365755",
+          "25": "CHN-43563684B58995436924100",
+          "26": "CHN-43563684B62959128536432",
+          "28": "CHN-43563684B84701301190484",
+          "29": "CHN-43563684B84540832148656",
+          "30": "CHN-43563684B38891657012300",
+          "31": "CHN-43563684B67556328368055",
+          "32": "CHN-43563684B14397599951889",
+          "33": "CHN-43563684B97743196909507"
+        }
+      },
+      "population_fallback": {
+        "path": "data/source/chn_ppp_2020_1km_Aggregated_UNadj.tif",
+        "provider": "WorldPop",
+        "year": 2020,
+        "source_id": "10.5258/SOTON/WP00671",
+        "policy": "un_adjusted_1km_zonal_sum_for_unresolved_units_only"
+      },
+      "admin1": [
+        {
+          "code": "CHN-43563684B75549295130005",
+          "name_ko": null,
+          "name_en": "Anhui Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B17418114845297",
+          "name_ko": null,
+          "name_en": "Beijing Municipality",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B97743196909507",
+          "name_ko": null,
+          "name_en": "Chongqing Municipality",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B30737817496648",
+          "name_ko": null,
+          "name_en": "Fujian Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B11053367304830",
+          "name_ko": null,
+          "name_en": "Gansu Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B59914390554750",
+          "name_ko": null,
+          "name_en": "Guangxi Zhuang Autonomous Region",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B38891657012300",
+          "name_ko": null,
+          "name_en": "Guangzhou Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B78583622565599",
+          "name_ko": null,
+          "name_en": "Guizhou Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B67556328368055",
+          "name_ko": null,
+          "name_en": "Hainan Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B58229551045164",
+          "name_ko": null,
+          "name_en": "Hebei Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B55920014778896",
+          "name_ko": null,
+          "name_en": "Heilongjiang Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B96917371447908",
+          "name_ko": null,
+          "name_en": "Henan Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B69230098435171",
+          "name_ko": null,
+          "name_en": "Hong Kong Special Administrative Region",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B41908353419915",
+          "name_ko": null,
+          "name_en": "Hubei Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B64987462919315",
+          "name_ko": null,
+          "name_en": "Hunan Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B95381459098578",
+          "name_ko": null,
+          "name_en": "Inner Mongolia Autonomous Region",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B64367354813847",
+          "name_ko": null,
+          "name_en": "Jiangsu Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B87813050901813",
+          "name_ko": null,
+          "name_en": "Jiangxi Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B3982601277390",
+          "name_ko": null,
+          "name_en": "Jilin Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B26929678147954",
+          "name_ko": null,
+          "name_en": "Liaoning Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B97104103456250",
+          "name_ko": null,
+          "name_en": "Macau Special Administrative Region",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B64666899633249",
+          "name_ko": null,
+          "name_en": "Ningxia Ningxia Hui Autonomous Region",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B46172434476792",
+          "name_ko": null,
+          "name_en": "Qinghai Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B62959128536432",
+          "name_ko": null,
+          "name_en": "Shaanxi Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B58995436924100",
+          "name_ko": null,
+          "name_en": "Shandong Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B32591653033375",
+          "name_ko": null,
+          "name_en": "Shanghai Municipality",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B34303967365755",
+          "name_ko": null,
+          "name_en": "Shanxi Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B14397599951889",
+          "name_ko": null,
+          "name_en": "Sichuan Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B84701301190484",
+          "name_ko": null,
+          "name_en": "Tianjin Municipality",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B19802372559419",
+          "name_ko": null,
+          "name_en": "Tibet Autonomous Region",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B50492231896073",
+          "name_ko": null,
+          "name_en": "Xinjiang Uyghur Autonomous Region",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B84540832148656",
+          "name_ko": null,
+          "name_en": "Yunnan Province",
+          "target_tiles": null
+        },
+        {
+          "code": "CHN-43563684B73528730180553",
+          "name_ko": null,
+          "name_en": "Zhejiang Province",
+          "target_tiles": null
+        }
+      ]
+    },
+    {
+      "country": {
+        "iso3": "JPN",
+        "iso2": "JP",
+        "name_ko": null,
+        "name_en": "Japan"
+      },
+      "admin1_source": {
+        "path": "data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM1.zip",
+        "archive_member": "geoBoundariesCGAZ_ADM1.shp",
+        "filter_field": "shapeGroup",
+        "filter_value": "JPN",
+        "code_field": "shapeID",
+        "name_field": "shapeName",
+        "source_year": 2023,
+        "snapshot_version": "CGAZ-6.0.0",
+        "code_map": {
+          "47310658B55038426470858": "JPN-47310658B55038426470858",
+          "47310658B53666900505284": "JPN-47310658B53666900505284",
+          "47310658B99690886618857": "JPN-47310658B99690886618857",
+          "47310658B56113460554138": "JPN-47310658B56113460554138",
+          "47310658B66619598690773": "JPN-47310658B66619598690773",
+          "47310658B6129583352403": "JPN-47310658B6129583352403",
+          "47310658B28580642450327": "JPN-47310658B28580642450327",
+          "47310658B36253982271084": "JPN-47310658B36253982271084",
+          "47310658B18585040133157": "JPN-47310658B18585040133157",
+          "47310658B199342310790": "JPN-47310658B199342310790",
+          "47310658B84955483384411": "JPN-47310658B84955483384411",
+          "47310658B92659408322453": "JPN-47310658B92659408322453",
+          "47310658B52822170400832": "JPN-47310658B52822170400832",
+          "47310658B20461581662238": "JPN-47310658B20461581662238",
+          "47310658B70834199776359": "JPN-47310658B70834199776359",
+          "47310658B53717877461658": "JPN-47310658B53717877461658",
+          "47310658B82893106270036": "JPN-47310658B82893106270036",
+          "47310658B9011809709100": "JPN-47310658B9011809709100",
+          "47310658B50146545060878": "JPN-47310658B50146545060878",
+          "47310658B56795339529760": "JPN-47310658B56795339529760",
+          "47310658B57998234967550": "JPN-47310658B57998234967550",
+          "47310658B94014236912993": "JPN-47310658B94014236912993",
+          "47310658B1351727290704": "JPN-47310658B1351727290704",
+          "47310658B31759366295450": "JPN-47310658B31759366295450",
+          "47310658B16920518838967": "JPN-47310658B16920518838967",
+          "47310658B84769036468911": "JPN-47310658B84769036468911",
+          "47310658B78383189487115": "JPN-47310658B78383189487115",
+          "47310658B41093195623763": "JPN-47310658B41093195623763",
+          "47310658B84734951454670": "JPN-47310658B84734951454670",
+          "47310658B40291932252870": "JPN-47310658B40291932252870",
+          "47310658B49885151916407": "JPN-47310658B49885151916407",
+          "47310658B89229150671737": "JPN-47310658B89229150671737",
+          "47310658B93104231283628": "JPN-47310658B93104231283628",
+          "47310658B1770087263252": "JPN-47310658B1770087263252",
+          "47310658B79582216473080": "JPN-47310658B79582216473080",
+          "47310658B25007192225139": "JPN-47310658B25007192225139",
+          "47310658B23327126724630": "JPN-47310658B23327126724630",
+          "47310658B25198997079345": "JPN-47310658B25198997079345",
+          "47310658B64524405341851": "JPN-47310658B64524405341851",
+          "47310658B14484689696833": "JPN-47310658B14484689696833",
+          "47310658B83740553463450": "JPN-47310658B83740553463450",
+          "47310658B3517091690": "JPN-47310658B3517091690",
+          "47310658B51488753471902": "JPN-47310658B51488753471902",
+          "47310658B61159371292051": "JPN-47310658B61159371292051",
+          "47310658B31569081891025": "JPN-47310658B31569081891025",
+          "47310658B99930143900280": "JPN-47310658B99930143900280",
+          "47310658B89542195514726": "JPN-47310658B89542195514726"
+        }
+      },
+      "city_source": {
+        "path": "data/source/JP.zip",
+        "member": "JP.txt",
+        "provider": "GeoNames",
+        "country_code": "JP",
+        "minimum_population": 100000,
+        "capital_geoname_id": "1850147",
+        "canonical_aliases": {},
+        "names_ko": {}
+      },
+      "tile_naming": {
+        "boundary_path": "data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM2.zip",
+        "boundary_archive_member": "geoBoundariesCGAZ_ADM2.shp",
+        "boundary_filter_field": "shapeGroup",
+        "boundary_filter_value": "JPN",
+        "boundary_provider": "geoBoundaries CGAZ 6.0.0",
+        "snapshot_version": "CGAZ-6.0.0",
+        "boundary_year": 2023,
+        "alternate_names_path": "data/source/geonames-alternatenames-JP.zip",
+        "alternate_names_member": "JP.txt",
+        "minimum_tile_share": 0.05,
+        "require_same_country": true,
+        "require_same_admin1": true,
+        "allocation_policy": "population_descending_unique_representatives_then_greatest_overlap_fill",
+        "aggregate_admin1_codes": [
+          "JPN-47310658B199342310790"
+        ],
+        "geonames_admin1_codes": {
+          "01": "JPN-47310658B49885151916407",
+          "02": "JPN-47310658B79582216473080",
+          "03": "JPN-47310658B70834199776359",
+          "04": "JPN-47310658B1351727290704",
+          "05": "JPN-47310658B51488753471902",
+          "06": "JPN-47310658B56113460554138",
+          "07": "JPN-47310658B84955483384411",
+          "08": "JPN-47310658B52822170400832",
+          "09": "JPN-47310658B28580642450327",
+          "10": "JPN-47310658B57998234967550",
+          "11": "JPN-47310658B84769036468911",
+          "12": "JPN-47310658B99930143900280",
+          "13": "JPN-47310658B99690886618857",
+          "14": "JPN-47310658B31759366295450",
+          "15": "JPN-47310658B64524405341851",
+          "16": "JPN-47310658B25007192225139",
+          "17": "JPN-47310658B61159371292051",
+          "18": "JPN-47310658B56795339529760",
+          "19": "JPN-47310658B16920518838967",
+          "20": "JPN-47310658B3517091690",
+          "21": "JPN-47310658B50146545060878",
+          "22": "JPN-47310658B94014236912993",
+          "23": "JPN-47310658B36253982271084",
+          "24": "JPN-47310658B93104231283628",
+          "25": "JPN-47310658B9011809709100",
+          "26": "JPN-47310658B40291932252870",
+          "27": "JPN-47310658B82893106270036",
+          "28": "JPN-47310658B6129583352403",
+          "29": "JPN-47310658B84734951454670",
+          "30": "JPN-47310658B53666900505284",
+          "31": "JPN-47310658B14484689696833",
+          "32": "JPN-47310658B55038426470858",
+          "33": "JPN-47310658B53717877461658",
+          "34": "JPN-47310658B92659408322453",
+          "35": "JPN-47310658B66619598690773",
+          "36": "JPN-47310658B41093195623763",
+          "37": "JPN-47310658B25198997079345",
+          "38": "JPN-47310658B20461581662238",
+          "39": "JPN-47310658B83740553463450",
+          "40": "JPN-47310658B199342310790",
+          "41": "JPN-47310658B78383189487115",
+          "42": "JPN-47310658B23327126724630",
+          "43": "JPN-47310658B18585040133157",
+          "44": "JPN-47310658B1770087263252",
+          "45": "JPN-47310658B89542195514726",
+          "46": "JPN-47310658B89229150671737",
+          "47": "JPN-47310658B31569081891025"
+        }
+      },
+      "population_fallback": {
+        "path": "data/source/jpn_ppp_2020_1km_Aggregated_UNadj.tif",
+        "provider": "WorldPop",
+        "year": 2020,
+        "source_id": "10.5258/SOTON/WP00671",
+        "policy": "un_adjusted_1km_zonal_sum_for_unresolved_units_only"
+      },
+      "admin1": [
+        {
+          "code": "JPN-47310658B49885151916407",
+          "name_ko": null,
+          "name_en": "Aichi Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B79582216473080",
+          "name_ko": null,
+          "name_en": "Akita",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B70834199776359",
+          "name_ko": null,
+          "name_en": "Aomori",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B1351727290704",
+          "name_ko": null,
+          "name_en": "Chiba",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B51488753471902",
+          "name_ko": null,
+          "name_en": "Ehime Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B56113460554138",
+          "name_ko": null,
+          "name_en": "Fukui Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B84955483384411",
+          "name_ko": null,
+          "name_en": "Fukuoka Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B52822170400832",
+          "name_ko": null,
+          "name_en": "Fukushima",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B28580642450327",
+          "name_ko": null,
+          "name_en": "Gifu Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B57998234967550",
+          "name_ko": null,
+          "name_en": "Gunma",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B84769036468911",
+          "name_ko": null,
+          "name_en": "Hiroshima",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B99930143900280",
+          "name_ko": null,
+          "name_en": "Hokkaido",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B99690886618857",
+          "name_ko": null,
+          "name_en": "Hyogo Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B31759366295450",
+          "name_ko": null,
+          "name_en": "Ibaraki",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B64524405341851",
+          "name_ko": null,
+          "name_en": "Ishikawa Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B25007192225139",
+          "name_ko": null,
+          "name_en": "Iwate",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B61159371292051",
+          "name_ko": null,
+          "name_en": "Kagawa Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B56795339529760",
+          "name_ko": null,
+          "name_en": "Kagoshima Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B16920518838967",
+          "name_ko": null,
+          "name_en": "Kanagawa",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B3517091690",
+          "name_ko": null,
+          "name_en": "Kochi Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B50146545060878",
+          "name_ko": null,
+          "name_en": "Kumamoto",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B94014236912993",
+          "name_ko": null,
+          "name_en": "Kyoto Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B36253982271084",
+          "name_ko": null,
+          "name_en": "Mie Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B93104231283628",
+          "name_ko": null,
+          "name_en": "Miyagi",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B9011809709100",
+          "name_ko": null,
+          "name_en": "Miyazaki Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B40291932252870",
+          "name_ko": null,
+          "name_en": "Nagano",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B82893106270036",
+          "name_ko": null,
+          "name_en": "Nagasaki Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B6129583352403",
+          "name_ko": null,
+          "name_en": "Nara Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B84734951454670",
+          "name_ko": null,
+          "name_en": "Niigata",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B53666900505284",
+          "name_ko": null,
+          "name_en": "Oita",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B14484689696833",
+          "name_ko": null,
+          "name_en": "Okayama Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B31569081891025",
+          "name_ko": null,
+          "name_en": "Okinawa Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B55038426470858",
+          "name_ko": null,
+          "name_en": "Osaka Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B53717877461658",
+          "name_ko": null,
+          "name_en": "Saga Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B92659408322453",
+          "name_ko": null,
+          "name_en": "Saitama",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B66619598690773",
+          "name_ko": null,
+          "name_en": "Shiga",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B41093195623763",
+          "name_ko": null,
+          "name_en": "Shimane",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B25198997079345",
+          "name_ko": null,
+          "name_en": "Shizuoka",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B20461581662238",
+          "name_ko": null,
+          "name_en": "Tochigi",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B83740553463450",
+          "name_ko": null,
+          "name_en": "Tokushima Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B199342310790",
+          "name_ko": null,
+          "name_en": "Tokyo",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B78383189487115",
+          "name_ko": null,
+          "name_en": "Tottori Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B23327126724630",
+          "name_ko": null,
+          "name_en": "Toyama",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B18585040133157",
+          "name_ko": null,
+          "name_en": "Wakayama Prefecture",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B1770087263252",
+          "name_ko": null,
+          "name_en": "Yamagata",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B89542195514726",
+          "name_ko": null,
+          "name_en": "Yamaguchi",
+          "target_tiles": null
+        },
+        {
+          "code": "JPN-47310658B89229150671737",
+          "name_ko": null,
+          "name_en": "Yamanashi",
+          "target_tiles": null
+        }
+      ]
+    },
+    {
+      "country": {
+        "iso3": "MNG",
+        "iso2": "MN",
+        "name_ko": null,
+        "name_en": "Mongolia"
+      },
+      "admin1_source": {
+        "path": "data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM1.zip",
+        "archive_member": "geoBoundariesCGAZ_ADM1.shp",
+        "filter_field": "shapeGroup",
+        "filter_value": "MNG",
+        "code_field": "shapeID",
+        "name_field": "shapeName",
+        "source_year": 2023,
+        "snapshot_version": "CGAZ-6.0.0",
+        "code_map": {
+          "14279143B81467460095364": "MNG-14279143B81467460095364",
+          "14279143B22317554045022": "MNG-14279143B22317554045022",
+          "14279143B63368554420497": "MNG-14279143B63368554420497",
+          "14279143B49613281560709": "MNG-14279143B49613281560709",
+          "14279143B47638406449643": "MNG-14279143B47638406449643",
+          "14279143B69842940795179": "MNG-14279143B69842940795179",
+          "14279143B31648094269757": "MNG-14279143B31648094269757",
+          "14279143B54746499726346": "MNG-14279143B54746499726346",
+          "14279143B39885639062119": "MNG-14279143B39885639062119",
+          "14279143B15424694570155": "MNG-14279143B15424694570155",
+          "14279143B49702315868913": "MNG-14279143B49702315868913",
+          "14279143B7576416025221": "MNG-14279143B7576416025221",
+          "14279143B59026071325992": "MNG-14279143B59026071325992",
+          "14279143B52126529381065": "MNG-14279143B52126529381065",
+          "14279143B32793669032275": "MNG-14279143B32793669032275",
+          "14279143B76228648820573": "MNG-14279143B76228648820573",
+          "14279143B35762276870520": "MNG-14279143B35762276870520",
+          "14279143B84215380438566": "MNG-14279143B84215380438566",
+          "14279143B20985490361275": "MNG-14279143B20985490361275",
+          "14279143B7284431230829": "MNG-14279143B7284431230829",
+          "14279143B32551742065768": "MNG-14279143B32551742065768",
+          "14279143B70362797710090": "MNG-14279143B70362797710090"
+        }
+      },
+      "city_source": {
+        "path": "data/source/MN.zip",
+        "member": "MN.txt",
+        "provider": "GeoNames",
+        "country_code": "MN",
+        "minimum_population": 100000,
+        "capital_geoname_id": "2028462",
+        "canonical_aliases": {
+          "ulan-bator": "ulaanbaatar"
+        },
+        "names_ko": {}
+      },
+      "tile_naming": {
+        "boundary_path": "data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM2.zip",
+        "boundary_archive_member": "geoBoundariesCGAZ_ADM2.shp",
+        "boundary_filter_field": "shapeGroup",
+        "boundary_filter_value": "MNG",
+        "boundary_provider": "geoBoundaries CGAZ 6.0.0",
+        "snapshot_version": "CGAZ-6.0.0",
+        "boundary_year": 2023,
+        "alternate_names_path": "data/source/geonames-alternatenames-MN.zip",
+        "alternate_names_member": "MN.txt",
+        "minimum_tile_share": 0.05,
+        "require_same_country": true,
+        "require_same_admin1": true,
+        "allocation_policy": "population_descending_unique_representatives_then_greatest_overlap_fill",
+        "aggregate_admin1_codes": [
+          "MNG-14279143B69842940795179"
+        ],
+        "geonames_admin1_codes": {
+          "01": "MNG-14279143B49702315868913",
+          "02": "MNG-14279143B7576416025221",
+          "03": "MNG-14279143B7284431230829",
+          "06": "MNG-14279143B35762276870520",
+          "07": "MNG-14279143B47638406449643",
+          "08": "MNG-14279143B59026071325992",
+          "09": "MNG-14279143B63368554420497",
+          "10": "MNG-14279143B39885639062119",
+          "11": "MNG-14279143B70362797710090",
+          "12": "MNG-14279143B22317554045022",
+          "13": "MNG-14279143B20985490361275",
+          "14": "MNG-14279143B52126529381065",
+          "15": "MNG-14279143B32793669032275",
+          "16": "MNG-14279143B84215380438566",
+          "17": "MNG-14279143B54746499726346",
+          "18": "MNG-14279143B76228648820573",
+          "19": "MNG-14279143B81467460095364",
+          "20": "MNG-14279143B69842940795179",
+          "21": "MNG-14279143B49613281560709",
+          "23": "MNG-14279143B32551742065768",
+          "24": "MNG-14279143B31648094269757",
+          "25": "MNG-14279143B15424694570155"
+        }
+      },
+      "population_fallback": {
+        "path": "data/source/mng_ppp_2020_1km_Aggregated_UNadj.tif",
+        "provider": "WorldPop",
+        "year": 2020,
+        "source_id": "10.5258/SOTON/WP00671",
+        "policy": "un_adjusted_1km_zonal_sum_for_unresolved_units_only"
+      },
+      "admin1": [
+        {
+          "code": "MNG-14279143B49702315868913",
+          "name_ko": null,
+          "name_en": "Arkhangai",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B7284431230829",
+          "name_ko": null,
+          "name_en": "Bayan-Ölgii",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B7576416025221",
+          "name_ko": null,
+          "name_en": "Bayankhongor",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B49613281560709",
+          "name_ko": null,
+          "name_en": "Bulgan",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B32551742065768",
+          "name_ko": null,
+          "name_en": "Darkhan-Uul",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B35762276870520",
+          "name_ko": null,
+          "name_en": "Dornod",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B47638406449643",
+          "name_ko": null,
+          "name_en": "Dornogovi",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B59026071325992",
+          "name_ko": null,
+          "name_en": "Dundgovi",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B39885639062119",
+          "name_ko": null,
+          "name_en": "Govi-Altai",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B31648094269757",
+          "name_ko": null,
+          "name_en": "Govisumber",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B20985490361275",
+          "name_ko": null,
+          "name_en": "Hovsgel",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B70362797710090",
+          "name_ko": null,
+          "name_en": "Khentii",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B22317554045022",
+          "name_ko": null,
+          "name_en": "Khovd",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B15424694570155",
+          "name_ko": null,
+          "name_en": "Orkhon",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B84215380438566",
+          "name_ko": null,
+          "name_en": "Selenge",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B54746499726346",
+          "name_ko": null,
+          "name_en": "Sükhbaatar",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B76228648820573",
+          "name_ko": null,
+          "name_en": "Töv",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B69842940795179",
+          "name_ko": null,
+          "name_en": "Ulaanbaatar",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B81467460095364",
+          "name_ko": null,
+          "name_en": "Uvs",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B63368554420497",
+          "name_ko": null,
+          "name_en": "Zavkhan",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B52126529381065",
+          "name_ko": null,
+          "name_en": "Ömnögovi",
+          "target_tiles": null
+        },
+        {
+          "code": "MNG-14279143B32793669032275",
+          "name_ko": null,
+          "name_en": "Övörkhangai",
+          "target_tiles": null
+        }
+      ]
+    },
+    {
+      "country": {
+        "iso3": "TWN",
+        "iso2": "TW",
+        "name_ko": null,
+        "name_en": "Taiwan"
+      },
+      "admin1_source": {
+        "path": "data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM1.zip",
+        "archive_member": "geoBoundariesCGAZ_ADM1.shp",
+        "filter_field": "shapeGroup",
+        "filter_value": "TWN",
+        "code_field": "shapeID",
+        "name_field": "shapeName",
+        "source_year": 2023,
+        "snapshot_version": "CGAZ-6.0.0",
+        "code_map": {
+          "90331920B98084155135420": "TWN-90331920B98084155135420",
+          "90331920B28258400455048": "TWN-90331920B28258400455048",
+          "90331920B68512430020187": "TWN-90331920B68512430020187",
+          "90331920B60519442170303": "TWN-90331920B60519442170303",
+          "90331920B44631347362338": "TWN-90331920B44631347362338",
+          "90331920B45331697504939": "TWN-90331920B45331697504939",
+          "90331920B80042697765976": "TWN-90331920B80042697765976",
+          "90331920B54932243986706": "TWN-90331920B54932243986706",
+          "90331920B3426825384645": "TWN-90331920B3426825384645",
+          "90331920B88579316672132": "TWN-90331920B88579316672132",
+          "90331920B93110903621752": "TWN-90331920B93110903621752",
+          "90331920B34778475945127": "TWN-90331920B34778475945127",
+          "90331920B28650079022847": "TWN-90331920B28650079022847",
+          "90331920B90000183725132": "TWN-90331920B90000183725132",
+          "90331920B8990770803141": "TWN-90331920B8990770803141",
+          "90331920B81487360502151": "TWN-90331920B81487360502151",
+          "90331920B7705287137405": "TWN-90331920B7705287137405",
+          "90331920B61423557936862": "TWN-90331920B61423557936862",
+          "90331920B89258408533695": "TWN-90331920B89258408533695",
+          "90331920B35610459745524": "TWN-90331920B35610459745524",
+          "90331920B22703176907123": "TWN-90331920B22703176907123",
+          "90331920B66653841730450": "TWN-90331920B66653841730450"
+        }
+      },
+      "city_source": {
+        "path": "data/source/TW.zip",
+        "member": "TW.txt",
+        "provider": "GeoNames",
+        "country_code": "TW",
+        "minimum_population": 100000,
+        "capital_geoname_id": "1668341",
+        "canonical_aliases": {},
+        "names_ko": {}
+      },
+      "tile_naming": {
+        "boundary_path": "data/source/geoboundaries_cgaz_6_0_0/geoBoundariesCGAZ_ADM2.zip",
+        "boundary_archive_member": "geoBoundariesCGAZ_ADM2.shp",
+        "boundary_filter_field": "shapeGroup",
+        "boundary_filter_value": "TWN",
+        "boundary_provider": "geoBoundaries CGAZ 6.0.0",
+        "snapshot_version": "CGAZ-6.0.0",
+        "boundary_year": 2023,
+        "alternate_names_path": "data/source/geonames-alternatenames-TW.zip",
+        "alternate_names_member": "TW.txt",
+        "minimum_tile_share": 0.05,
+        "require_same_country": true,
+        "require_same_admin1": true,
+        "allocation_policy": "population_descending_unique_representatives_then_greatest_overlap_fill",
+        "aggregate_admin1_codes": [
+          "TWN-90331920B22703176907123"
+        ],
+        "geonames_admin1_codes": {
+          "02": "TWN-90331920B66653841730450",
+          "03": "TWN-90331920B89258408533695",
+          "04": "TWN-90331920B7705287137405"
+        }
+      },
+      "population_fallback": {
+        "path": "data/source/twn_ppp_2020_1km_Aggregated_UNadj.tif",
+        "provider": "WorldPop",
+        "year": 2020,
+        "source_id": "10.5258/SOTON/WP00671",
+        "policy": "un_adjusted_1km_zonal_sum_for_unresolved_units_only"
+      },
+      "admin1": [
+        {
+          "code": "TWN-90331920B54932243986706",
+          "name_ko": null,
+          "name_en": "Changhua County",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B90000183725132",
+          "name_ko": null,
+          "name_en": "Chiayi",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B44631347362338",
+          "name_ko": null,
+          "name_en": "Chiayi County",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B8990770803141",
+          "name_ko": null,
+          "name_en": "Hsinchu",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B98084155135420",
+          "name_ko": null,
+          "name_en": "Hsinchu County",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B93110903621752",
+          "name_ko": null,
+          "name_en": "Hualien County",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B66653841730450",
+          "name_ko": null,
+          "name_en": "Kaohsiung",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B81487360502151",
+          "name_ko": null,
+          "name_en": "Keelung",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B60519442170303",
+          "name_ko": null,
+          "name_en": "Kinmen",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B68512430020187",
+          "name_ko": null,
+          "name_en": "Matsu Islands",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B28258400455048",
+          "name_ko": null,
+          "name_en": "Miaoli County",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B80042697765976",
+          "name_ko": null,
+          "name_en": "Nantou County",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B89258408533695",
+          "name_ko": null,
+          "name_en": "New Taipei",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B34778475945127",
+          "name_ko": null,
+          "name_en": "Penghu",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B3426825384645",
+          "name_ko": null,
+          "name_en": "Pingtung County",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B7705287137405",
+          "name_ko": null,
+          "name_en": "Taichung",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B35610459745524",
+          "name_ko": null,
+          "name_en": "Tainan",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B22703176907123",
+          "name_ko": null,
+          "name_en": "Taipei",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B88579316672132",
+          "name_ko": null,
+          "name_en": "Taitung County",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B61423557936862",
+          "name_ko": null,
+          "name_en": "Taoyuan",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B45331697504939",
+          "name_ko": null,
+          "name_en": "Yilan County",
+          "target_tiles": null
+        },
+        {
+          "code": "TWN-90331920B28650079022847",
+          "name_ko": null,
+          "name_en": "Yunlin County",
+          "target_tiles": null
+        }
+      ]
+    }
+  ]
+}

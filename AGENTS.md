@@ -3,9 +3,10 @@
 ## Mission
 
 Build a reproducible QGIS pipeline for the modern nation-management 4X game
-**Atlas**. The first deliverable is a Korean Peninsula game map containing KOR
-and PRK on one common grid of complete regular hexagons. Work must be reproducible on macOS and
-Windows with QGIS LTR 3.44, PyQGIS, and `qgis_process`.
+**Atlas**. The current deliverable is an East Asia game map containing KOR,
+PRK, CHN, MNG, JPN and TWN on one continuous OGC ISEA3H level-11 spherical grid.
+Work must be reproducible on macOS and Windows with QGIS LTR 3.44, PyQGIS and
+`qgis_process`.
 
 Keep `AtlasMap/GLOBAL_MAP_RULES.md` as the authoritative cross-country design
 contract. Any change to ownership, naming, city, capital, population, global
@@ -13,8 +14,8 @@ grid, or validation rules must update that document together with code and
 configuration.
 
 The project is a game-map approximation. Do not enforce a fixed national tile
-count. Assign each global-grid hex to the country or ocean occupying its largest
-area; keep KOR- and PRK-dominant hexes as their respective national tiles.
+count. Assign each global-grid cell to the country or ocean occupying its largest
+area; keep KOR- and PRK-dominant cells as their respective national tiles.
 National ownership may never cross or collide and always follows greatest
 country-or-ocean overlap. Guarantee every official Admin-1 one positive-overlap
 representative tile inside the same dominant country whenever this can be done
@@ -37,7 +38,8 @@ Historical targets remain advisory.
 - Use only paths relative to the `AtlasMap/` project root in project files,
   configuration, and scripts. Never hard-code macOS absolute paths or Windows
   drive paths.
-- Use QGIS core functionality only. Do not add QGIS plugin dependencies.
+- Use QGIS core functionality for GIS processing and presentation. Do not add
+  QGIS plugin or external grid-generator dependencies.
 - Prefer repeatable PyQGIS and `qgis_process` workflows over manual GUI edits.
 - Preserve source data. Write transformed and generated layers only to the
   processed GeoPackage.
@@ -67,22 +69,22 @@ Historical targets remain advisory.
 
 ```text
 AtlasMap/
-├── Atlas_Korea.qgz
+├── Atlas_East_Asia.qgz
 ├── AGENTS.md
 ├── GLOBAL_MAP_RULES.md
 ├── README.md
 ├── .gitignore
 ├── .gitattributes
 ├── config/
-│   └── atlas_korea.json
+│   └── atlas_east_asia.json
 ├── data/
 │   ├── source/
 │   │   └── README.md
 │   └── processed/
-│       └── Atlas_Korea.gpkg
+│       └── Atlas_East_Asia.gpkg
 ├── scripts/
-│   ├── build_korea_map.py
-│   ├── validate_korea_map.py
+│   ├── build_east_asia_map.py
+│   ├── validate_east_asia_map.py
 │   ├── validate_global_readiness.py
 │   ├── export_for_unreal.py
 │   ├── run_mac.sh
@@ -104,23 +106,24 @@ required GeoPackage remain trackable.
 ## Single Source of Truth
 
 Store every adjustable design value and validation tolerance in
-`config/atlas_korea.json`. Do not duplicate these constants in Python:
+`config/atlas_east_asia.json`. Do not duplicate these constants in Python:
 
-- Countries: Republic of Korea (`KOR`) and Democratic People's Republic of
-  Korea (`PRK`), generated simultaneously on the same grid
-- Project CRS: `EPSG:5179` (`KGD2002 / Unified CS`)
+- Countries: `KOR`, `PRK`, `CHN`, `MNG`, `JPN` and `TWN`, generated
+  simultaneously on the same grid
+- Canonical grid: OGC ISEA3H level 11 on the WGS84 authalic sphere, generated
+  with pinned DGGAL 0.0.6
 - National tile count: derived from dominant country-or-ocean overlap, not fixed
-- Target area per regular hexagon: 605.21 km2
-- Side length: approximately 15,262.55 m
-- Flat-top dimensions: approximately 30,525.10 m x 26,435.51 m
-- Pointy-top dimensions: approximately 26,435.51 m x 30,525.10 m
-- Default orientation: `pointy_top`
-- The orientation must be switchable to `flat_top` with one config value and a
-  complete rebuild.
-- Never clip game hexagons to the coastline. Every final game tile remains a
+- Global cell count: 1,771,460 hexagons plus 12 pentagons
+- Canonical areas: about 287.933536 km2 per hexagon and 239.944614 km2 per pentagon
+- Build borders and neighbors from canonical spherical DGGRS topology.
+- Canonical IDs: `ATLAS_ISEA3H_L11_{zone_text_id}`
+- Antimeridian and polar continuity are native to the global topology.
+- Use `EPSG:8857` Equal Earth for intersection analysis and `EPSG:3857` Web
+  Mercator for QGIS project/preview display only.
+- Never clip game cells to the coastline. Every final game tile remains a
   complete regular hexagon.
 - Show administrative borders along shared edges between differently assigned
-  hexagons; do not use the curved source boundary as the game border.
+  cells; do not use the curved source boundary as the game border.
 
 Original admin-1 design targets, retained for comparison and reporting rather
 than used as hard validation constraints:
@@ -161,23 +164,23 @@ not just the display labels in this table.
   boundaries. Document the exact required format and destination path, then
   pause only the data-dependent processing stages.
 - Store cleaned/reprojected data in
-  `data/processed/Atlas_Korea.gpkg`; keep the original source unchanged.
+  `data/processed/Atlas_East_Asia.gpkg`; keep the original source unchanged.
 
 ## Build Pipeline Requirements
 
-Implement `scripts/build_korea_map.py` so that the same inputs and configuration
+Implement `scripts/build_east_asia_map.py` so that the same inputs and configuration
 produce the same geometries, assignments, and stable `tile_id` values:
 
-1. Load the admin-1 source, safely repair invalid geometries, and transform it
-   to EPSG:5179.
-2. Generate complete 605.21 km2 regular-hex candidates over Korea and nearby
-   waters.
-3. Calculate each hexagon's intersection area and ratio against Korean land and
+1. Load the WGS84 admin-1 source, safely repair invalid geometries, and use an
+   appropriate equal-area analysis CRS for regional intersection calculations.
+2. Enumerate complete ISEA3H level-11 spherical-cell candidates near all six
+   configured countries using immutable canonical DGGAL IDs.
+3. Calculate each cell's intersection area and ratio against configured land and
    every admin-1 area.
 4. Select uncut candidates for the game map.
 5. Initially assign each tile to the admin area with greatest overlap.
-6. Compare Korea, nearby countries, and ocean in every candidate. Select every
-   Korea-dominant candidate, then reserve one positive-overlap same-country tile
+6. Compare configured countries, nearby countries, and ocean in every candidate.
+   Select every configured-country-dominant candidate, then reserve one positive-overlap same-country tile
    for each official Admin-1 that would otherwise have zero representation.
    Never remove another official area's last tile; keep every other tile with
    its greatest-overlap owner.
@@ -189,13 +192,13 @@ produce the same geometries, assignments, and stable `tile_id` values:
 
 ## GeoPackage Contract
 
-Create at least these layers in `Atlas_Korea.gpkg`:
+Create at least these layers in `Atlas_East_Asia.gpkg`:
 
-- `admin1_source`: cleaned/reprojected KOR and PRK first-level boundaries
+- `admin1_source`: cleaned/reprojected first-level boundaries for all six countries
 - `hex_candidates`: all candidates and overlap scores
-- `korea_tiles`: all KOR- and PRK-dominant final game hexagons
+- `east_asia_tiles`: all six countries' final game cells
 
-`korea_tiles` must include at least:
+`east_asia_tiles` must include at least:
 
 ```text
 tile_id
@@ -217,6 +220,7 @@ city_name_ko
 city_name_en
 city_class
 is_capital
+is_capital_anchor
 is_initial_city
 city_upgrade_eligible
 map_class
@@ -251,7 +255,7 @@ every correction is auditable. Do not add country-specific population patches.
 If both GeoNames matches fail, calculate a zonal sum from the configured
 WorldPop UN-adjusted 1 km raster and store its DOI as `population_source_id`.
 These naming-unit populations are internal name-allocation evidence, not game
-tile population. Do not publish `tile_name_population` on `korea_tiles`.
+tile population. Do not publish `tile_name_population` on `east_asia_tiles`.
 
 For game population, give each represented qualifying real city one anchor tile
 whose single population equals its GeoNames city population. Subtract all city
@@ -278,15 +282,23 @@ After this unique-representative pass, fill remaining tiles with their
 greatest-overlap intersecting unit; break area ties by population, then stable
 unit code. Any positive overlap is eligible. A smaller unit may never evict a
 matched larger unit. This priority never relaxes spatial overlap or boundaries.
+If and only if no eligible ADM2/equivalent naming unit has positive overlap,
+use the same-owner Admin-1 geometry and name as an auditable positive-overlap
+coverage fallback. Give it zero naming-allocation population and exclude it
+from the unique-representative pass; it may never change ownership.
 Apply this algorithm identically to every configured country now and to every
 country added during world-map expansion; do not introduce country-specific
 naming branches or exceptions.
 Derive initial city/metropolis fill from the anchored real-city population;
 ordinary dense tiles remain `admin` and expose promotion eligibility separately.
-Capital status follows the final name but never overrides fill. Draw a yellow
-outline only on the exterior edges of the complete official capital Admin-1
-tile group, including tiles in that Admin-1 whose display name is not the
-capital city name. Cancel all internal edges within that Admin-1 group.
+Capital status follows the final name but never overrides fill. Set
+`is_capital` on every tile carrying the represented capital naming-unit code,
+and draw a yellow outline only on the exterior edges of that complete
+capital-name tile group. Cancel internal edges shared by the same capital-name
+group; do not include differently named tiles merely because they belong to the
+capital Admin-1. Set `is_capital_anchor` on exactly one representative real-city
+anchor per country. Capital-only gameplay bonuses, facilities, and slots apply
+only to that anchor, not to every yellow-outlined tile.
 Official capital Admin-1 areas use the same one-tile representation floor as
 all other official areas. Display naming may cross neither national nor Admin-1
 ownership boundaries.
@@ -297,7 +309,7 @@ population, `city_class`, or `is_initial_city` status to the other tiles.
 
 ## QGIS Project and Outputs
 
-- Save `Atlas_Korea.qgz` with relative data paths only.
+- Save `Atlas_East_Asia.qgz` with relative data paths only.
 - Use exactly three tile fill classes: normal administrative tile, city, and
   metropolis. Show capitals with a yellow group outline, not a separate fill.
   Do not use a different fill per admin-1 area;
@@ -316,13 +328,13 @@ population, `city_class`, or `is_initial_city` status to the other tiles.
   summary labels at close zoom so they cannot cover tile names.
 - Put real source boundaries in a separate toggleable validation group so they
   are not confused with the game-map boundary.
-- Export `previews/Atlas_Korea_Overview.png`.
-- Write `reports/allocation_report.md` with target/actual/difference per admin,
+- Export `previews/Atlas_East_Asia_Overview.png`.
+- Write `reports/east_asia_allocation_report.md` with target/actual/difference per admin,
   boundary tiles, and manual override status.
 - Export final tile attributes through `scripts/export_for_unreal.py` to
-  `exports/Atlas_Korea_Tiles.geojson` and
-  `exports/Atlas_Korea_Tiles.csv`. Keep the GeoPackage in EPSG:5179 and transform
-  only exports that require another CRS.
+  `exports/Atlas_East_Asia_Tiles.geojson` and
+  `exports/Atlas_East_Asia_Tiles.csv`. Keep the GeoPackage in `EPSG:8857` and
+  transform interchange exports to WGS84 where required.
 - Provide `scripts/run_mac.sh` and `scripts/run_windows.ps1`. Both must invoke
   the same config and Python logic, auto-detect QGIS where practical, and accept
   a `QGIS_PROCESS` environment override. Keep platform-specific path syntax out
@@ -330,18 +342,19 @@ population, `city_class`, or `is_initial_city` status to the other tiles.
 
 ## Validation Is a Release Gate
 
-Implement `scripts/validate_korea_map.py` and fail with a nonzero exit status if
+Implement `scripts/validate_east_asia_map.py` and fail with a nonzero exit status if
 any check fails:
 
-- CRS is EPSG:5179.
-- Every final tile is Korea-dominant over neighboring countries and ocean; the
+- Each tile round-trips to its configured ISEA3H level-11 DGGAL identity.
+- Every final tile is configured-country-dominant over neighboring countries and ocean; the
   national total is derived rather than fixed.
 - Every feasible official Admin-1 has at least one positive-overlap
   representative tile inside its dominant country. Every non-representative
   tile keeps its greatest-overlap owner; targets remain report-only.
 - Every `tile_id` is present and unique.
-- Every final geometry is valid, complete, and a regular hexagon.
-- Hex area is within the configured tolerance of 605.21 km2.
+- Every final geometry is a valid complete uncut spherical cell projection.
+- Canonical hexagons have six neighbors and pentagons five; a regional subset may expose fewer selected neighbors.
+- Spherical area and cell type match canonical DGGAL values.
 - Every tile has exactly one admin assignment.
 - Final tiles do not overlap one another.
 - Every neighbor ID exists and all adjacency is symmetric.

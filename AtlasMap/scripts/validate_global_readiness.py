@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit whether the Korea prototype is structurally ready for a world build."""
+"""Audit whether the East Asia milestone is structurally ready for a world build."""
 
 from __future__ import annotations
 
@@ -9,13 +9,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-def configured_countries(settings):
+def configured_countries(root, settings):
     primary = {
         "country": settings["country"],
         "admin1_source": settings["admin1_source"],
         "tile_naming": settings["tile_naming"],
     }
-    return [primary, *settings.get("additional_countries", [])]
+    countries = [primary, *settings.get("additional_countries", [])]
+    registry_path = settings.get("globalization", {}).get("country_registry_path")
+    if registry_path and (root / registry_path).is_file():
+        registry = json.loads((root / registry_path).read_text(encoding="utf-8"))
+        countries.extend(registry.get("countries", []))
+    return countries
 
 
 def nonempty(value):
@@ -28,7 +33,7 @@ def main():
     )
     parser.add_argument(
         "--config",
-        default="config/atlas_korea.json",
+        default="config/atlas_east_asia.json",
         help="Path to the current Atlas configuration.",
     )
     args = parser.parse_args()
@@ -39,8 +44,8 @@ def main():
     globalization = settings.get("globalization", {})
     snapshot = globalization.get("canonical_boundary_snapshot", {})
     global_grid = globalization.get("global_grid", {})
-    countries = configured_countries(settings)
-    build_path = root / "scripts" / "build_korea_map.py"
+    countries = configured_countries(root, settings)
+    build_path = root / "scripts" / "build_east_asia_map.py"
     build_text = build_path.read_text(encoding="utf-8")
 
     checks = []
@@ -120,13 +125,57 @@ def main():
     )
 
     grid_missing = [
-        field for field in ("crs_or_dggs", "tile_id_scheme", "world_wrap_policy", "polar_policy")
+        field for field in (
+            "type", "crs_or_dggs", "level", "global_cell_count",
+            "hexagon_count", "pentagon_count", "tile_id_scheme",
+            "antimeridian_policy", "polar_policy",
+        )
         if not nonempty(global_grid.get(field))
     ]
     check(
-        "Global grid, world-wrap and polar policies are frozen",
-        not grid_missing and str(settings.get("crs")) != "EPSG:5179",
-        f"missing={grid_missing}; prototype_crs={settings.get('crs')}",
+        "Global spherical grid, antimeridian and polar policies are frozen",
+        not grid_missing,
+        f"missing={grid_missing}; regional_analysis_crs="
+        f"{settings.get('analysis_crs', settings.get('crs'))}; "
+        f"regional_display_crs={settings.get('display_crs')}",
+    )
+    generator = global_grid.get("generator", {})
+    spherical_contract = (
+        global_grid.get("type") == "spherical_dggrs"
+        and global_grid.get("crs_or_dggs") == "OGC ISEA3H"
+        and int(global_grid.get("level", -1)) == 11
+        and int(global_grid.get("global_cell_count", 0)) == 1771472
+        and int(global_grid.get("hexagon_count", 0)) == 1771460
+        and int(global_grid.get("pentagon_count", 0)) == 12
+        and generator.get("library") == "DGGAL"
+        and generator.get("version") == "0.0.6"
+        and generator.get("qgis_plugin_required") is False
+    )
+    check(
+        "Canonical spherical DGGRS generator is reproducible",
+        spherical_contract,
+        f"type={global_grid.get('type')}; dggrs={global_grid.get('crs_or_dggs')}; "
+        f"level={global_grid.get('level')}; cells={global_grid.get('global_cell_count')}; "
+        f"generator={generator.get('library')} {generator.get('version')}",
+    )
+    spherical_builder = all(marker in build_text for marker in (
+        "generate_spherical_cells", "ATLAS_ISEA3H_L", "getZoneNeighbors",
+    ))
+    check(
+        "Production ownership builder uses canonical spherical topology",
+        spherical_builder,
+        (
+            "builder enumerates ISEA3H cells and obtains adjacency from DGGAL"
+            if spherical_builder
+            else "builder does not expose the complete canonical spherical-grid markers"
+        ),
+    )
+    check(
+        "World-edge topology is implemented rather than deferred",
+        "deferred" not in str(global_grid.get("antimeridian_policy"))
+        and "deferred" not in str(global_grid.get("polar_policy")),
+        f"antimeridian={global_grid.get('antimeridian_policy')}; "
+        f"polar={global_grid.get('polar_policy')}",
     )
     check(
         "Tile IDs are independent of ownership",
@@ -144,8 +193,10 @@ def main():
     )
     check(
         "Spatial indexes are used for global boundary lookup",
-        "QgsSpatialIndex" in build_text,
-        "QgsSpatialIndex not found in the current builder",
+        all(marker in build_text for marker in (
+            "naming_spatial_index", "admin_spatial_index", "country_spatial_index",
+        )),
+        "naming lookup is indexed; ADM0 and ADM1 global lookup indexes remain pending",
     )
     hierarchy_audit = globalization.get("hierarchy_coherence_audit", {})
     hierarchy_report = hierarchy_audit.get("prototype_report")
@@ -164,10 +215,10 @@ def main():
     pairwise_marker = "for position, first_index in enumerate(selected_indexes):"
     coordinate_neighbor_lookup = pairwise_marker not in build_text
     check(
-        "Neighbor lookup is coordinate based rather than pairwise",
+        "Neighbor lookup is topology-key based rather than pairwise",
         coordinate_neighbor_lookup,
         (
-            "normalized edge-key topology lookup"
+            "canonical DGGRS neighbor keys"
             if coordinate_neighbor_lookup
             else "current builder performs an O(n^2) selected-tile neighbor scan"
         ),
@@ -231,8 +282,8 @@ def main():
         "",
         "## Interpretation",
         "",
-        "This audit is separate from the Korean Peninsula release gate. A FAIL here",
-        "does not invalidate a geometrically correct Korea build; it means the current",
+        "This audit is separate from the East Asia release gate. A FAIL here",
+        "does not invalidate a geometrically correct East Asia build; it means the current",
         "pipeline must not yet be treated as the canonical world-map pipeline.",
         "",
         "The authoritative design contract is `GLOBAL_MAP_RULES.md`.",

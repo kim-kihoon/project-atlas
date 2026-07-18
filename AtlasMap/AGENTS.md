@@ -3,14 +3,19 @@
 Follow the repository-root `AGENTS.md`. This directory is the portable QGIS
 project root. Every path stored in QGIS projects, configuration, scripts,
 reports, and metadata must be relative to this directory. Use
-`config/atlas_korea.json` as the only source for map design constants.
+`config/atlas_east_asia.json` as the only source for map design constants.
 `GLOBAL_MAP_RULES.md` is the authoritative cross-country design contract and
 must stay synchronized with allocation code, configuration, and validation.
 Select country tiles by dominant country-or-ocean overlap with no fixed national tile
 count, then guarantee one positive-overlap same-country representative for each
 feasible official Admin-1 and assign remaining tiles to their dominant admin
-overlap. Build KOR and PRK simultaneously on one shared grid; a tile's
-`country_iso3`, dominant territory, and Admin-1 country must agree. Admin target
+overlap. Build KOR, PRK, CHN, MNG, JPN, and TWN simultaneously on one shared
+OGC ISEA3H level-11 spherical DGGRS. Canonical identity, cell type, spherical
+area and adjacency come from pinned DGGAL; `EPSG:8857` Equal Earth is the
+intersection CRS and `EPSG:3857` Web Mercator is the QGIS display CRS. The
+global grid contains 1,771,460 hexagons and
+12 pentagons; a tile's `country_iso3`, dominant territory, and Admin-1 country must
+agree. Admin target
 counts are advisory report values only. Never remove another Admin-1's last
 tile or cross a national boundary to satisfy representation. Never report
 completion unless build, validation,
@@ -28,9 +33,9 @@ Do not mix one boundary vintage for country dominance with another for Admin-1
 ownership.
 
 National ownership is a hard boundary. No override, Admin-1 assignment, naming
-unit, or population-based classification may transfer a tile between KOR and
-PRK. Shared KOR/PRK hex edges use `edge_type=country`; same-country ownership
-changes use `edge_type=admin`.
+unit, or population-based classification may transfer a tile between any two
+countries. Shared hex edges between different countries use
+`edge_type=country`; same-country ownership changes use `edge_type=admin`.
 
 Assign each naming unit to its greatest-overlap current authoritative Admin-1,
 clip its geometry to that Admin-1, and consider it only for tiles with the same
@@ -66,10 +71,13 @@ remaining national population across non-anchor tiles so the configured UN WPP
 medium-variant national sum remains exact. Store only this one population value.
 
 Use exactly three tile fill classes: `admin`, `city`, and `metropolis`.
-Capital is not a fill class: draw one yellow topology-derived outline around
-the complete official capital Admin-1 tile group, including differently named
-tiles inside that administration. Cancel its internal shared edges. All ordinary
-administrative tiles share one fill color. Make
+Capital is not a fill class: set `is_capital` on every tile carrying the capital
+naming-unit code and draw one yellow topology-derived outline around that
+complete capital-name tile group only. Cancel same-capital-name internal shared
+edges; do not include differently named tiles merely because they are in the
+capital Admin-1. Set `is_capital_anchor` on exactly one representative real-city
+anchor per country, and apply capital-only gameplay effects only to that anchor.
+All ordinary administrative tiles share one fill color. Make
 admin-1 ownership legible through the `admin1_tile_borders` layer, whose lines
 must be substantially stronger than ordinary tile outlines.
 Official capital Admin-1 areas use the same one-tile ownership representation

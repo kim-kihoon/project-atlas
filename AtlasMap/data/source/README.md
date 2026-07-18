@@ -183,6 +183,31 @@ filtered, repaired, and reprojected layers belong in
 - Dataset: North Korea 2020 unconstrained population count, 1 km, UN-adjusted
 - URL: https://hub.worldpop.org/geodata/summary?id=37063
 - Direct file: https://data.worldpop.org/GIS/Population/Global_2000_2020_1km_UNadj/2020/PRK/prk_ppp_2020_1km_Aggregated_UNadj.tif
+
+## East Asia milestone additions (CHN, JPN, MNG, TWN)
+
+Downloaded 2026-07-17. GeoNames country dumps use
+`https://download.geonames.org/export/dump/{ISO2}.zip`; alternate-name dumps
+use `https://download.geonames.org/export/dump/alternatenames/{ISO2}.zip`.
+WorldPop files use the 2020 Global 1 km UN-adjusted series at
+`https://data.worldpop.org/GIS/Population/Global_2000_2020_1km_UNadj/2020/{ISO3}/{iso3}_ppp_2020_1km_Aggregated_UNadj.tif`.
+GeoNames is licensed under CC BY 4.0; WorldPop is used under its published open
+data terms and DOI `10.5258/SOTON/WP00671`.
+
+| File | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `CN.zip` | 32,069,101 | `25f099342f92b7569c99b3320fdbf2c411011cc2394930395c93b6a04827def5` |
+| `JP.zip` | 4,957,061 | `5fc720beeae4f3912a323067fe5db0bb78e11cea2fb08a500487dc64ad961349` |
+| `MN.zip` | 306,533 | `3c658f019f8661242285de9d02b09ab1ca464b1a552bfb38e62965bc8a13f809` |
+| `TW.zip` | 2,299,397 | `9b5045f1b5940597d27a4840f560aca895d3f3c9711e05bd80912e35fc1e2c0a` |
+| `geonames-alternatenames-CN.zip` | 20,882,274 | `be6af3014e599001a0e0dfe32d711eae730ecebf07893831806e89b4360d984e` |
+| `geonames-alternatenames-JP.zip` | 3,757,258 | `cccd455143377b605e99eb8b38ef5bae41f1499029b6159a925bc0a35b872269` |
+| `geonames-alternatenames-MN.zip` | 242,008 | `56e29d0f2909eb029bf364f7319bc61637e5ac1e870d67daaa4660f7c7dec240` |
+| `geonames-alternatenames-TW.zip` | 1,777,987 | `1886cc41090e85faa5f22351ff80ed4ca5e1d6ac21198f24a1dab4a96700aadc` |
+| `chn_ppp_2020_1km_Aggregated_UNadj.tif` | 49,445,858 | `701fa532bfc6eb775682f38806e82ac53487f8b9de15a55c838c34633d7b743a` |
+| `jpn_ppp_2020_1km_Aggregated_UNadj.tif` | 2,827,654 | `7bfe9507f196efac3226fb9a9efaad7ae0e37742b2196faaac4803db3bd1e8ee` |
+| `mng_ppp_2020_1km_Aggregated_UNadj.tif` | 11,304,651 | `ea333a43335045fd402421652571ea4e7a9a91bf02f0dac61daeda5317666a5e` |
+| `twn_ppp_2020_1km_Aggregated_UNadj.tif` | 237,608 | `27d000275a0f58379cde451d07a4462bc4ec89d70ce0085374e38b201b1e6e4c` |
 - DOI: `10.5258/SOTON/WP00671`
 - Downloaded: 2026-07-15 (Asia/Seoul)
 - Original file: `prk_ppp_2020_1km_Aggregated_UNadj.tif`

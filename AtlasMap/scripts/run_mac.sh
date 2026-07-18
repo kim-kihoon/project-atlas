@@ -3,9 +3,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-CONFIG="$ROOT/config/atlas_korea.json"
+CONFIG="$ROOT/config/atlas_east_asia.json"
+export PYTHONPATH="$ROOT/.runtime/dggal${PYTHONPATH:+:$PYTHONPATH}"
+export DYLD_LIBRARY_PATH="$ROOT/.runtime/dggal/bin${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
 STAGE="${1:-all}"
-
 if [[ "$STAGE" == "global-validate" ]]; then
   if ! command -v python3 >/dev/null 2>&1; then
     echo "Python 3 is required for the global-readiness audit." >&2
@@ -48,23 +49,31 @@ run_algorithm() {
 
 case "$STAGE" in
   build)
-    run_algorithm build_korea_map.py
+    run_algorithm build_country_registry.py
+    run_algorithm build_east_asia_map.py
+    ;;
+  borders)
+    run_algorithm refresh_border_presentation.py
+    ;;
+  registry)
+    run_algorithm build_country_registry.py
     ;;
   validate)
-    run_algorithm validate_korea_map.py
-    grep -Fq 'Overall result: **PASS**' "$ROOT/reports/validation_report.md"
+    run_algorithm validate_east_asia_map.py
+    grep -Fq 'Overall result: **PASS**' "$ROOT/reports/east_asia_validation_report.md"
     ;;
   export)
     run_algorithm export_for_unreal.py
     ;;
   all)
-    run_algorithm build_korea_map.py
-    run_algorithm validate_korea_map.py
-    grep -Fq 'Overall result: **PASS**' "$ROOT/reports/validation_report.md"
+    run_algorithm build_country_registry.py
+    run_algorithm build_east_asia_map.py
+    run_algorithm validate_east_asia_map.py
+    grep -Fq 'Overall result: **PASS**' "$ROOT/reports/east_asia_validation_report.md"
     run_algorithm export_for_unreal.py
     ;;
   *)
-    echo "Usage: $0 {all|build|validate|global-validate|export}" >&2
+    echo "Usage: $0 {all|registry|build|borders|validate|global-validate|export}" >&2
     exit 2
     ;;
 esac
