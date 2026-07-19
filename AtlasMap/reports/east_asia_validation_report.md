@@ -1,6 +1,6 @@
 # Atlas East Asia validation report
 
-Generated: 2026-07-17T19:06:22.511509+00:00
+Generated: 2026-07-19T00:15:55.192581+00:00
 
 Overall result: **PASS**
 
@@ -11,7 +11,7 @@ Overall result: **PASS**
 | Every country enforces same-country naming | PASS | invalid=[] |
 | Every country explicitly configures naming/Admin-1 coupling | PASS | invalid=[] |
 | Every country uses representative-priority then greatest-overlap fill | PASS | invalid=[] |
-| GeoPackage layer loads | PASS | C:\Users\jungle\Documents\Atlas\AtlasMap\data\processed\Atlas_East_Asia.gpkg |
+| GeoPackage layer loads | PASS | C:\Users\leona\Documents\Atlas\AtlasMap\data\processed\Atlas_East_Asia.gpkg |
 | Analysis CRS | PASS | EPSG:8857 |
 | Final country codes | PASS | wrong_country=[] |
 | Tile IDs present | PASS | blank=0 |
@@ -60,12 +60,14 @@ Overall result: **PASS**
 | Metropolis fill darker than city fill | PASS | city=#4aa3d8, metropolis=#173f6f |
 | Capital outline color is configured | PASS | capital_outline=#f4c542 |
 | Coastal line layer is intentionally absent | PASS | coastal_tile_outlines is not published during border development |
-| Spherical DGGRS contract | PASS | global_count=1771472; contract={'type': 'spherical_dggrs', 'crs_or_dggs': 'OGC ISEA3H', 'definition_uri': 'https://www.opengis.net/def/dggrs/OGC/1.0/ISEA3H', 'reference_surface': 'WGS84_authalic_sphere', 'level': 11, 'global_cell_count': 1771472, 'hexagon_count': 1771460, 'pentagon_count': 12, 'hexagon_area_km2': 287.9335363986343, 'pentagon_area_km2': 239.9446136655286, 'edge_refinement': 0, 'candidate_bbox_buffer_degrees': 2.0, 'topology': 'canonical_DGGRS_adjacency_five_or_six_neighbors', 'tile_id_scheme': 'ATLAS_ISEA3H_L{level}_{zone_text_id}', 'ownership_independent_tile_ids': True, 'antimeridian_policy': 'native_spherical_adjacency_no_planar_seam', 'polar_policy': 'native_spherical_cells_no_planar_singularity', 'generator': {'library': 'DGGAL', 'version': '0.0.6', 'license': 'BSD-3-Clause', 'qgis_plugin_required': False}} |
+| Unreal runtime contract fields exist | PASS | missing=[] |
+| Spherical DGGRS contract | PASS | global_count=1771472; contract={'type': 'spherical_dggrs', 'crs_or_dggs': 'OGC ISEA3H', 'definition_uri': 'https://www.opengis.net/def/dggrs/OGC/1.0/ISEA3H', 'reference_surface': 'WGS84_authalic_sphere', 'level': 11, 'chunk_level': 7, 'global_cell_count': 1771472, 'hexagon_count': 1771460, 'pentagon_count': 12, 'hexagon_area_km2': 287.9335363986343, 'pentagon_area_km2': 239.9446136655286, 'edge_refinement': 0, 'candidate_bbox_buffer_degrees': 2.0, 'topology': 'canonical_DGGRS_adjacency_five_or_six_neighbors', 'tile_id_scheme': 'ATLAS_ISEA3H_L{level}_{zone_text_id}', 'ownership_independent_tile_ids': True, 'antimeridian_policy': 'native_spherical_adjacency_no_planar_seam', 'polar_policy': 'native_spherical_cells_no_planar_singularity', 'generator': {'library': 'DGGAL', 'version': '0.0.6', 'license': 'BSD-3-Clause', 'qgis_plugin_required': False}} |
 | Valid projected display geometries | PASS | invalid=[] |
 | Canonical hexagon/pentagon cell types | PASS | invalid=[] |
 | Stable canonical ISEA3H IDs | PASS | invalid=[] |
 | Canonical spherical cell areas | PASS | outside_tolerance=[] |
 | Final cells are complete uncut candidates | PASS | invalid=[] |
+| Unreal runtime topology and chunk contract | PASS | invalid=[] |
 | No tile overlap | PASS | overlaps=[] |
 | Neighbor JSON | PASS | malformed=[] |
 | Neighbor lists contain no duplicates | PASS | invalid=[] |
