@@ -1,11 +1,22 @@
 ﻿param(
     [ValidateSet("all", "registry", "build", "borders", "validate", "global-validate", "export")]
-    [string]$Stage = "all"
+    [string]$Stage = "all",
+    [string]$ConfigPath,
+    [string]$ValidationReportPath
 )
 
 $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$Config = Join-Path $Root "config\atlas_east_asia.json"
+$Config = if ($ConfigPath) {
+    (Resolve-Path $ConfigPath).Path
+} else {
+    Join-Path $Root "config\atlas_east_asia.json"
+}
+$ValidationReport = if ($ValidationReportPath) {
+    Join-Path $Root $ValidationReportPath
+} else {
+    Join-Path $Root "reports\east_asia_validation_report.md"
+}
 $DggalRuntime = Join-Path $Root ".runtime\dggal"
 $DggalBin = Join-Path $DggalRuntime "bin"
 $env:PYTHONPATH = "$DggalRuntime;$env:PYTHONPATH"
@@ -66,7 +77,7 @@ switch ($Stage) {
     "borders" { Invoke-AtlasAlgorithm "refresh_border_presentation.py" }
     "validate" {
         Invoke-AtlasAlgorithm "validate_east_asia_map.py"
-        if (-not (Select-String -Path (Join-Path $Root "reports\east_asia_validation_report.md") -SimpleMatch 'Overall result: **PASS**' -Quiet)) {
+        if (-not (Select-String -Path $ValidationReport -SimpleMatch 'Overall result: **PASS**' -Quiet)) {
             throw "Validation report did not pass."
         }
     }
@@ -75,7 +86,7 @@ switch ($Stage) {
         Invoke-AtlasAlgorithm "build_country_registry.py"
         Invoke-AtlasAlgorithm "build_east_asia_map.py"
         Invoke-AtlasAlgorithm "validate_east_asia_map.py"
-        if (-not (Select-String -Path (Join-Path $Root "reports\east_asia_validation_report.md") -SimpleMatch 'Overall result: **PASS**' -Quiet)) {
+        if (-not (Select-String -Path $ValidationReport -SimpleMatch 'Overall result: **PASS**' -Quiet)) {
             throw "Validation report did not pass."
         }
         Invoke-AtlasAlgorithm "export_for_unreal.py"

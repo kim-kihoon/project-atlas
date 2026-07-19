@@ -38,6 +38,7 @@
       "definition_uri": "https://www.opengis.net/def/dggrs/OGC/1.0/ISEA3H",
       "reference_surface": "WGS84_authalic_sphere",
       "level": 11,
+      "chunk_level": 7,
       "global_cell_count": 1771472,
       "hexagon_count": 1771460,
       "pentagon_count": 12,
@@ -350,7 +351,8 @@
     "allocation_report": "reports/east_asia_allocation_report.md",
     "validation_report": "reports/east_asia_validation_report.md",
     "geojson": "exports/Atlas_East_Asia_Tiles.geojson",
-    "csv": "exports/Atlas_East_Asia_Tiles.csv"
+    "csv": "exports/Atlas_East_Asia_Tiles.csv",
+    "runtime_fixture": "exports/Atlas_Runtime_Contract_Fixture_v1.json"
   },
   "admin1": [
     {"code":"KR-11","name_ko":"서울","name_en":"Seoul","target_tiles":1,"color":"#e41a1c"},

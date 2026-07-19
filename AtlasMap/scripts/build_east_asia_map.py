@@ -268,6 +268,11 @@ def generate_spherical_cells(root, settings, extent_wgs84, target_crs, context):
     dggrs = ISEA3H()
     contract = settings["globalization"]["global_grid"]
     level = int(contract["level"])
+    chunk_level = int(contract.get("chunk_level", 7))
+    if chunk_level < 0 or chunk_level >= level:
+        raise QgsProcessingException(
+            f"Invalid ISEA3H chunk level {chunk_level}; expected 0 <= chunk < {level}"
+        )
     edge_refinement = int(contract.get("edge_refinement", 0))
     buffer_degrees = float(contract.get("candidate_bbox_buffer_degrees", 2.0))
     west = max(-180.0, float(extent_wgs84.xMinimum()) - buffer_degrees)
@@ -391,11 +396,20 @@ def generate_spherical_cells(root, settings, extent_wgs84, target_crs, context):
             side_geometry = QgsGeometry.fromPolylineXY(side_points)
             side_geometry.transform(transform)
             edge_key = "|".join(sorted((tile_id, neighbor_id)))
-            edge_records.append((edge_key, side_geometry))
+            edge_records.append((edge_key, side_geometry, neighbor_id))
 
         centroid = dggrs.getZoneWGS84Centroid(zone)
+        center_lon = float(centroid.lon)
+        center_lat = float(centroid.lat)
+        center_unit = unit_vector(center_lon, center_lat)
+        chunk_zone = dggrs.getZoneFromWGS84Centroid(chunk_level, centroid)
+        if int(dggrs.getZoneLevel(chunk_zone)) != chunk_level:
+            raise QgsProcessingException(
+                f"Could not resolve level-{chunk_level} chunk for {zone_id}"
+            )
+        chunk_zone_id = str(dggrs.getZoneTextID(chunk_zone))
         center_geometry = QgsGeometry.fromPointXY(
-            QgsPointXY(float(centroid.lon), float(centroid.lat))
+            QgsPointXY(center_lon, center_lat)
         )
         center_geometry.transform(transform)
         center = center_geometry.asPoint()
@@ -410,9 +424,14 @@ def generate_spherical_cells(root, settings, extent_wgs84, target_crs, context):
                 "col": -1,
                 "cx": float(center.x()),
                 "cy": float(center.y()),
+                "center_lon": center_lon,
+                "center_lat": center_lat,
+                "center_unit": center_unit,
+                "chunk_id": f"ATLAS_ISEA3H_L{chunk_level}_{chunk_zone_id}",
                 "geometry": polygon,
                 "edge_records": edge_records,
                 "canonical_neighbor_ids": sorted(neighbor_ids),
+                "side_neighbor_ids": ordered_neighbor_ids,
             }
         )
     return cells
@@ -1537,7 +1556,7 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
         selected_ids = {candidates[i]["tile_id"] for i in selected_indexes}
         edge_members = {}
         for index in selected_indexes:
-            for edge_key, geometry in candidates[index]["edge_records"]:
+            for edge_key, geometry, _neighbor_id in candidates[index]["edge_records"]:
                 edge_members.setdefault(edge_key, []).append((index, geometry))
 
         # Derive adjacency and borders from canonical DGGS neighbor-pair keys.
@@ -1788,6 +1807,11 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
             ("admin1_name_en", QVariant.String), ("area_km2", QVariant.Double),
             ("land_ratio", QVariant.Double), ("is_coastal", QVariant.Bool),
             ("center_x", QVariant.Double), ("center_y", QVariant.Double),
+            ("center_lon", QVariant.Double), ("center_lat", QVariant.Double),
+            ("center_ux", QVariant.Double), ("center_uy", QVariant.Double),
+            ("center_uz", QVariant.Double), ("chunk_id", QVariant.String),
+            ("canonical_neighbor_ids", QVariant.String),
+            ("side_neighbor_ids", QVariant.String),
             ("neighbor_ids", QVariant.String), ("population", QVariant.LongLong),
             ("population_year", QVariant.Int),
             ("population_method", QVariant.String),
@@ -1856,6 +1880,16 @@ class AtlasKoreaBuild(QgsProcessingAlgorithm):
                 "land_ratio": candidate["land_area"] / candidate["geometry"].area(),
                 "is_coastal": candidate["land_area"] / candidate["geometry"].area() < 0.999,
                 "center_x": candidate["cx"], "center_y": candidate["cy"],
+                "center_lon": candidate["center_lon"],
+                "center_lat": candidate["center_lat"],
+                "center_ux": candidate["center_unit"][0],
+                "center_uy": candidate["center_unit"][1],
+                "center_uz": candidate["center_unit"][2],
+                "chunk_id": candidate["chunk_id"],
+                "canonical_neighbor_ids": json.dumps(
+                    candidate["canonical_neighbor_ids"], separators=(",", ":")),
+                "side_neighbor_ids": json.dumps(
+                    candidate["side_neighbor_ids"], separators=(",", ":")),
                 "neighbor_ids": json.dumps(neighbors[candidate["tile_id"]], separators=(",", ":")),
                 "population": population,
                 "population_year": int(settings["population_model"]["national_totals_year"]),

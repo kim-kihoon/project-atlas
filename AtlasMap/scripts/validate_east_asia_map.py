@@ -1082,8 +1082,21 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         invalid_ids = []
         invalid_areas = []
         clipped_or_changed = []
+        runtime_contract_errors = []
         canonical_neighbors = {}
         canonical_edge_counts = {}
+        runtime_fields = {
+            "center_lon", "center_lat", "center_ux", "center_uy", "center_uz",
+            "chunk_id", "canonical_neighbor_ids", "side_neighbor_ids",
+        }
+        missing_runtime_fields = sorted(
+            runtime_fields - {field.name() for field in layer.fields()}
+        )
+        check(
+            "Unreal runtime contract fields exist",
+            not missing_runtime_fields,
+            f"missing={missing_runtime_fields}",
+        )
         for feature in features:
             geometry = feature.geometry()
             tile_id = str(feature["tile_id"])
@@ -1114,6 +1127,42 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
                 f"ATLAS_ISEA3H_L{level}_{dggrs.getZoneTextID(value)}"
                 for value in dggrs.getZoneNeighbors(zone, Array("<int>"))
             }
+            if not missing_runtime_fields:
+                try:
+                    canonical_values = json.loads(
+                        str(feature["canonical_neighbor_ids"] or "[]")
+                    )
+                    side_values = json.loads(str(feature["side_neighbor_ids"] or "[]"))
+                    center_unit = (
+                        float(feature["center_ux"]),
+                        float(feature["center_uy"]),
+                        float(feature["center_uz"]),
+                    )
+                    center_length = math.sqrt(sum(value * value for value in center_unit))
+                    longitude = float(feature["center_lon"])
+                    latitude = float(feature["center_lat"])
+                    chunk_level = int(global_grid.get("chunk_level", 7))
+                    centroid = dggrs.getZoneWGS84Centroid(zone)
+                    chunk_zone = dggrs.getZoneFromWGS84Centroid(
+                        chunk_level, centroid
+                    )
+                    expected_chunk = (
+                        f"ATLAS_ISEA3H_L{chunk_level}_{dggrs.getZoneTextID(chunk_zone)}"
+                    )
+                    if (
+                        set(canonical_values) != canonical_neighbors[tile_id]
+                        or len(canonical_values) != edge_count
+                        or len(side_values) != edge_count
+                        or set(side_values) != canonical_neighbors[tile_id]
+                        or len(side_values) != len(set(side_values))
+                        or abs(center_length - 1.0) > 1.0e-9
+                        or not (-180.0 <= longitude <= 180.0)
+                        or not (-90.0 <= latitude <= 90.0)
+                        or str(feature["chunk_id"] or "") != expected_chunk
+                    ):
+                        runtime_contract_errors.append(tile_id)
+                except (TypeError, ValueError, json.JSONDecodeError):
+                    runtime_contract_errors.append(tile_id)
             candidate = candidate_by_id.get(tile_id)
             if candidate is None or not geometry.equals(candidate.geometry()):
                 clipped_or_changed.append(tile_id)
@@ -1129,6 +1178,11 @@ class AtlasKoreaValidate(QgsProcessingAlgorithm):
         check("Stable canonical ISEA3H IDs", not invalid_ids, f"invalid={invalid_ids[:20]}")
         check("Canonical spherical cell areas", not invalid_areas, f"outside_tolerance={invalid_areas[:20]}")
         check("Final cells are complete uncut candidates", not clipped_or_changed, f"invalid={clipped_or_changed[:20]}")
+        check(
+            "Unreal runtime topology and chunk contract",
+            not runtime_contract_errors,
+            f"invalid={runtime_contract_errors[:20]}",
+        )
 
         overlap_tolerance = float(validation["overlap_area_tolerance_m2"])
         overlaps = []

@@ -175,6 +175,9 @@ being mistaken for a world-ready pipeline.
   completeness conflicts in the pinned CGAZ snapshot.
 - `GLOBAL_MAP_RULES.md`: authoritative global allocation and validation rules.
 - `exports/Atlas_East_Asia_Tiles.geojson` and `.csv`: Unreal-oriented exports.
+- `exports/Atlas_Runtime_Contract_Fixture_v1.json`: versioned Unreal loader
+  fixture with two Korean hexagons, the regional pentagon, spherical centers,
+  side-ordered topology, level-7 parent chunks, and boundary unit vectors.
 
 Current deterministic tile counts are KOR 332, PRK 418, CHN 32,215, JPN 1,262,
 MNG 5,461 and TWN 124, for 39,812 cells total. This regional selection contains
@@ -182,6 +185,13 @@ MNG 5,461 and TWN 124, for 39,812 cells total. This regional selection contains
 from country-or-ocean dominance and recorded in the allocation report. Tile IDs
 use `ATLAS_ISEA3H_L11_{zone_text_id}` and do not contain country or
 administrative ownership.
+
+`neighbor_ids` contains only adjacency inside the selected East Asia land
+subset and remains useful for regional QGIS border checks. Unreal movement and
+world pathfinding must use `canonical_neighbor_ids`; `side_neighbor_ids`
+contains the same complete neighbor set in logical polygon-side order. The
+GeoJSON export is transformed to WGS84 longitude/latitude and rejects projected
+coordinates before it can be published.
 
 QGIS terms for beginners: a **layer** is one collection of map features; a
 **GeoPackage** is one database file that can hold several layers; a **CRS** is
